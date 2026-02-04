@@ -12,7 +12,6 @@ import type { AddProblem, LessonDef } from '@/lib/u1-1/types';
 
 type Feedback = {
   kind: 'none' | 'correct' | 'wrong';
-  message?: string;
 };
 
 function fmt(template: string, vars: Record<string, string | number>) {
@@ -56,10 +55,12 @@ function computeHint(problem: AddProblem, rand: () => number) {
   ];
 }
 
-function Stage({ children }: { children: React.ReactNode }) {
+function Stage({ children, pulse }: { children: React.ReactNode; pulse: 'none' | 'ok' | 'no' }) {
   return (
     <div className="stageWrap">
-      <div className="stage">{children}</div>
+      <div className={pulse === 'ok' ? 'stage stageOk' : pulse === 'no' ? 'stage stageNo' : 'stage'}>
+        {children}
+      </div>
       <style jsx>{`
         .stageWrap {
           display: flex;
@@ -74,11 +75,20 @@ function Stage({ children }: { children: React.ReactNode }) {
           height: auto;
           aspect-ratio: 1 / 1;
           background: linear-gradient(180deg, #111a2c, #0d1424);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          border: 2px solid rgba(255, 255, 255, 0.12);
           border-radius: 18px;
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
           position: relative;
           overflow: hidden;
+          transition: border-color 120ms ease, box-shadow 120ms ease;
+        }
+        .stageOk {
+          border-color: rgba(107, 203, 119, 0.95);
+          box-shadow: 0 0 0 6px rgba(107, 203, 119, 0.12), 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+        .stageNo {
+          border-color: rgba(255, 107, 107, 0.95);
+          box-shadow: 0 0 0 6px rgba(255, 107, 107, 0.10), 0 12px 30px rgba(0, 0, 0, 0.35);
         }
       `}</style>
     </div>
@@ -224,6 +234,7 @@ export default function Home() {
   const [index, setIndex] = useState(0);
   const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState<Feedback>({ kind: 'none' });
+  const [fxPulse, setFxPulse] = useState<'none' | 'ok' | 'no'>('none');
   const [wrongOnce, setWrongOnce] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [hintLines, setHintLines] = useState<string[]>([]);
@@ -243,9 +254,48 @@ export default function Home() {
     setIndex(0);
     setInput('');
     setFeedback({ kind: 'none' });
+    setFxPulse('none');
     setWrongOnce(false);
     setHintOpen(false);
     setHintLines([]);
+  }
+
+  function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain = 0.03) {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+
+      osc.type = type;
+      osc.frequency.value = freq;
+      g.gain.value = gain;
+
+      osc.connect(g);
+      g.connect(ctx.destination);
+
+      osc.start();
+      window.setTimeout(() => {
+        osc.stop();
+        ctx.close();
+      }, ms);
+    } catch {
+      // ignore
+    }
+  }
+
+  function fxOk() {
+    // short pleasant two-tone
+    playTone(880, 90, 'sine', 0.035);
+    window.setTimeout(() => playTone(1175, 110, 'sine', 0.03), 90);
+    setFxPulse('ok');
+    window.setTimeout(() => setFxPulse('none'), 180);
+  }
+
+  function fxNo() {
+    playTone(220, 140, 'triangle', 0.03);
+    setFxPulse('no');
+    window.setTimeout(() => setFxPulse('none'), 220);
   }
 
   function answerWith(n: number) {
@@ -253,7 +303,8 @@ export default function Home() {
 
     const ok = n === current.answer;
     if (ok) {
-      setFeedback({ kind: 'correct', message: pickLine('answer.correct', rand) });
+      setFeedback({ kind: 'correct' });
+      fxOk();
       setWrongOnce(false);
       setHintOpen(false);
       setHintLines([]);
@@ -263,11 +314,12 @@ export default function Home() {
         setFeedback({ kind: 'none' });
         setInput('');
         setIndex((i) => Math.min(i + 1, 5));
-      }, 450);
+      }, 420);
       return;
     }
 
-    setFeedback({ kind: 'wrong', message: pickLine('answer.wrong.soft', rand) });
+    setFeedback({ kind: 'wrong' });
+    fxNo();
     setWrongOnce(true);
   }
 
@@ -284,6 +336,7 @@ export default function Home() {
     setHintLines(lines);
     setHintOpen(true);
     setFeedback({ kind: 'none' });
+    setFxPulse('none');
   }
 
   const lessonOptions = useMemo(() => {
@@ -338,7 +391,7 @@ export default function Home() {
   return (
     <div className="shell">
       <div className="board">
-        <Stage>
+        <Stage pulse={fxPulse}>
           <div className="hud">
             <ProgressDots index={index} />
             <div className="pill">U1-1</div>
@@ -361,15 +414,9 @@ export default function Home() {
                 </div>
 
                 <div className="below">
-                  {feedback.kind !== 'none' && (
-                    <div className={feedback.kind === 'correct' ? 'fb fbOk' : 'fb fbNo'}>
-                      {feedback.message}
-                    </div>
-                  )}
-
                   {wrongOnce && !hintOpen && (
                     <button className="hintBtn" onClick={openHint}>
-                      {pickLine('hint.available', rand)}
+                      힌트
                     </button>
                   )}
                 </div>
