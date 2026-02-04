@@ -1,0 +1,23 @@
+{
+  "unitId": "U1-1",
+  "description": "0~10 덧셈(받아올림 없음)",
+  "constraints": {
+    "min": 0,
+    "max": 10,
+    "maxSum": 10
+  },
+  "lesson": {
+    "problemCount": 6,
+    "choiceCount": 2,
+    "keypadCount": 4
+  },
+  "choiceDistractors": {
+    "candidates": ["ans-1", "ans+1", "abs(a-b)", "a", "b", "ans-2", "ans+2"],
+    "min": 0,
+    "max": 10
+  },
+  "antiRepeat": {
+    "noDuplicateInLesson": true,
+    "recentProblemCacheSize": 30
+  }
+}

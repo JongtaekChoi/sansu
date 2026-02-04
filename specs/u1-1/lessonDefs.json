@@ -1,0 +1,34 @@
+{
+  "unitId": "U1-1",
+  "stage": {
+    "A": "0/1 중심 + 합<=5",
+    "B": "합<=8, small=2~3 중심",
+    "C": "합<=10, small=4~5 비중 증가",
+    "D": "종합(합<=10) + 복습 비중"
+  },
+  "lessons": [
+    {"lessonId": "U1-1-L01", "stage": "A", "focus": "ZERO", "maxSum": 5},
+    {"lessonId": "U1-1-L02", "stage": "A", "focus": "ONE", "maxSum": 5},
+    {"lessonId": "U1-1-L03", "stage": "A", "focus": "ZERO_ONE_MIX", "maxSum": 5},
+    {"lessonId": "U1-1-L04", "stage": "A", "focus": "SUM_LE_5", "maxSum": 5},
+    {"lessonId": "U1-1-L05", "stage": "A", "focus": "REVIEW", "maxSum": 5},
+
+    {"lessonId": "U1-1-L06", "stage": "B", "focus": "SMALL_2_3", "maxSum": 8, "preferredSmall": [2,3]},
+    {"lessonId": "U1-1-L07", "stage": "B", "focus": "SMALL_2_3", "maxSum": 8, "preferredSmall": [2,3]},
+    {"lessonId": "U1-1-L08", "stage": "B", "focus": "MIX_WITH_ONE", "maxSum": 8, "preferredSmall": [1,2,3]},
+    {"lessonId": "U1-1-L09", "stage": "B", "focus": "SUM_LE_8", "maxSum": 8},
+    {"lessonId": "U1-1-L10", "stage": "B", "focus": "REVIEW", "maxSum": 8},
+
+    {"lessonId": "U1-1-L11", "stage": "C", "focus": "SMALL_4_5", "maxSum": 10, "preferredSmall": [4,5]},
+    {"lessonId": "U1-1-L12", "stage": "C", "focus": "SMALL_4_5", "maxSum": 10, "preferredSmall": [4,5]},
+    {"lessonId": "U1-1-L13", "stage": "C", "focus": "MIX_WITH_2_3", "maxSum": 10, "preferredSmall": [2,3,4,5]},
+    {"lessonId": "U1-1-L14", "stage": "C", "focus": "SUM_LE_10", "maxSum": 10},
+    {"lessonId": "U1-1-L15", "stage": "C", "focus": "REVIEW", "maxSum": 10},
+
+    {"lessonId": "U1-1-L16", "stage": "D", "focus": "MIX", "maxSum": 10},
+    {"lessonId": "U1-1-L17", "stage": "D", "focus": "MIX", "maxSum": 10},
+    {"lessonId": "U1-1-L18", "stage": "D", "focus": "MIX", "maxSum": 10},
+    {"lessonId": "U1-1-L19", "stage": "D", "focus": "REVIEW", "maxSum": 10},
+    {"lessonId": "U1-1-L20", "stage": "D", "focus": "CAPSTONE", "maxSum": 10}
+  ]
+}
