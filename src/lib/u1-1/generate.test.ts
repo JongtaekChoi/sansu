@@ -31,30 +31,31 @@ describe('U1-1 generator', () => {
         expect(probs.length).toBe((params as any).lesson.problemCount);
 
         for (const p of probs) {
-          expect(p.op).toBe('+');
-          expect(p.a).toBeGreaterThanOrEqual((params as any).constraints.min);
-          expect(p.b).toBeGreaterThanOrEqual((params as any).constraints.min);
-          expect(p.a).toBeLessThanOrEqual((params as any).constraints.max);
-          expect(p.b).toBeLessThanOrEqual((params as any).constraints.max);
-          expect(p.a + p.b).toBeLessThanOrEqual(lesson.maxSum);
-
-          if (p.ui === 'choice') {
-            assertChoices(p, (params as any).choiceDistractors.min, (params as any).choiceDistractors.max);
+          if (p.kind === 'ARITH_CHOICE') {
+            expect(p.op).toBe('+');
+            expect(p.a).toBeGreaterThanOrEqual((params as any).constraints.min);
+            expect(p.b).toBeGreaterThanOrEqual((params as any).constraints.min);
+            expect(p.a).toBeLessThanOrEqual((params as any).constraints.max);
+            expect(p.b).toBeLessThanOrEqual((params as any).constraints.max);
+            expect(p.a + p.b).toBeLessThanOrEqual(lesson.maxSum);
+          } else {
+            // render count
+            expect(p.answer).toBeGreaterThanOrEqual(1);
+            expect(p.answer).toBeLessThanOrEqual(Math.min(10, Math.max(1, lesson.maxSum)));
           }
+
+          assertChoices(p, (params as any).choiceDistractors.min, (params as any).choiceDistractors.max);
         }
       }
     }
   });
 
-  it('handles answer=0 choices (never hangs, still 4 options)', () => {
+  it('handles answer=0 choice generation (still 4 options)', async () => {
     const rand = mulberry32(12345);
-    // Manually build a tiny lesson that can yield answer 0 (0+0)
-    const lesson = { lessonId: 'TEST', stage: 'A', focus: 'ZERO', maxSum: 0 } as any;
-    const recent: string[] = [];
-    const probs = generateLesson('U1-1', lesson, params as any, rand, recent);
-    expect(probs.length).toBe((params as any).lesson.problemCount);
-    const p = probs[0];
-    expect(p.answer).toBe(0);
-    assertChoices(p, (params as any).choiceDistractors.min, (params as any).choiceDistractors.max);
+    const { buildChoiceOptions } = await import('./generate');
+
+    const choices = buildChoiceOptions(0, 0, 0, params as any, rand);
+    expect(choices.length).toBe(4);
+    expect(new Set(choices).has(0)).toBe(true);
   });
 });

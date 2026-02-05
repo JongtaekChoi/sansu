@@ -8,6 +8,7 @@ import { GeneratorParamsSchema, LessonDefsFileSchema } from '@/lib/u1-1/schema';
 
 import { Choices } from '@/components/Choices';
 import { ProgressDots } from '@/components/ProgressDots';
+import { RenderView } from '@/components/RenderView';
 import { Stage, type StagePulse } from '@/components/Stage';
 
 import styles from './page.module.scss';
@@ -326,11 +327,20 @@ export default function Home() {
             ) : (
               <>
                 <div className={styles.problem}>
-                  <div className={styles.expr}>
-                    {current.a} <span className={styles.op}>+</span> {current.b}
-                  </div>
-                  <div className={styles.eq}>=</div>
-                  <div className={styles.q}>?</div>
+                  {current.kind === 'ARITH_CHOICE' ? (
+                    <>
+                      <div className={styles.expr}>
+                        {current.a} <span className={styles.op}>+</span> {current.b}
+                      </div>
+                      <div className={styles.eq}>=</div>
+                      <div className={styles.q}>?</div>
+                    </>
+                  ) : (
+                    <div className={styles.renderPrompt}>
+                      <div className={styles.renderTitle}>몇 개야?</div>
+                      <RenderView spec={current.renderSpec} />
+                    </div>
+                  )}
                 </div>
 
                 <div className={styles.below}>

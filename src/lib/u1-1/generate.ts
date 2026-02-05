@@ -1,4 +1,4 @@
-import type { AddProblem, GeneratorParams, LessonDef, ProblemUiType } from './types';
+import type { AddProblem, ColorToken, GeneratorParams, LessonDef, ProblemUiType, RenderSpec } from './types';
 import { pickOne, shuffle } from './rng';
 
 function clamp(n: number, min: number, max: number) {
@@ -133,6 +133,38 @@ function pickPairForLesson(lesson: LessonDef, params: GeneratorParams, rand: () 
   throw new Error(`Failed to pick pair for ${lesson.lessonId}`);
 }
 
+function pickColor(rand: () => number, avoid?: ColorToken): ColorToken {
+  const colors: ColorToken[] = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'];
+  const pool = avoid ? colors.filter((c) => c !== avoid) : colors;
+  return pool[Math.floor(rand() * pool.length)] ?? 'c1';
+}
+
+function factorPairs(n: number): Array<[number, number]> {
+  const pairs: Array<[number, number]> = [];
+  for (let a = 1; a <= n; a++) {
+    if (n % a === 0) pairs.push([a, n / a]);
+  }
+  return pairs;
+}
+
+function pickRenderCountSpec(answer: number, rand: () => number, color: ColorToken): RenderSpec {
+  // Randomly choose between dots and grid.
+  if (rand() < 0.5) {
+    // dots: pick perRow to look nice
+    const perRow = answer <= 5 ? 5 : answer <= 8 ? 4 : 5;
+    return { type: 'arrayDots', count: answer, perRow, fill: color };
+  }
+
+  // grid: choose a factor pair; prefer more square-ish shapes
+  const pairs = factorPairs(answer);
+  // score by squareness
+  const scored = pairs
+    .map(([r, c]) => ({ r, c, score: Math.abs(r - c) + (Math.min(r, c) === 1 ? 2 : 0) }))
+    .sort((a, b) => a.score - b.score);
+  const pick = scored[Math.floor(rand() * Math.min(3, scored.length))] ?? scored[0];
+  return { type: 'gridRect', rows: pick.r, cols: pick.c, gap: 6, radius: 10, fill: color };
+}
+
 export function generateLesson(
   unitId: 'U1-1',
   lesson: LessonDef,
@@ -157,7 +189,15 @@ export function generateLesson(
   const MAX_TOTAL_TRIES = 20_000;
   let totalTries = 0;
 
-  for (let i = 0; i < params.lesson.problemCount; i++) {
+  // Mix in 1 render-count problem per lesson (U1: counting 1..min(10,maxSum))
+  const renderAnswerMax = Math.min(10, Math.max(1, lesson.maxSum));
+  const renderAnswer = 1 + Math.floor(rand() * renderAnswerMax);
+  const renderColor = pickColor(rand);
+  const renderSpec = pickRenderCountSpec(renderAnswer, rand, renderColor);
+  const renderChoices = buildChoiceOptions(0, 0, renderAnswer, params, rand);
+  problems.push({ kind: 'RENDER_CHOICE_COUNT', unitId, ui: 'choice', renderSpec, answer: renderAnswer, choices: renderChoices });
+
+  for (let i = 1; i < params.lesson.problemCount; i++) {
     let placed = false;
 
     for (let attempt = 0; attempt < 400; attempt++) {
@@ -180,18 +220,18 @@ export function generateLesson(
       const ui = chooseUi(i, params);
       const answer = a + b;
 
+      if (ui !== 'choice') continue;
+
       const p: AddProblem = {
+        kind: 'ARITH_CHOICE',
         unitId,
         op: '+',
         a,
         b,
         answer,
-        ui,
+        ui: 'choice',
+        choices: buildChoiceOptions(a, b, answer, params, rand),
       };
-
-      if (ui === 'choice') {
-        p.choices = buildChoiceOptions(a, b, answer, params, rand);
-      }
 
       problems.push(p);
       used.add(k);

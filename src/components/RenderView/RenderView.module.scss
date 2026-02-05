@@ -1,0 +1,10 @@
+.wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.svg {
+  width: min(520px, 100%);
+  height: auto;
+}
