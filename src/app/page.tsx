@@ -45,14 +45,7 @@ function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain 
   }
 }
 
-if (typeof window !== 'undefined') {
-  debugLog('module_loaded', { path: '/src/app/page.tsx' });
-}
-
 export default function Home() {
-  if (typeof window !== 'undefined') {
-    debugLog('render');
-  }
   const lessonDefs = (LessonDefsJson as { lessons: LessonDef[] }).lessons;
   const params = GeneratorParamsJson as any;
 
@@ -120,15 +113,20 @@ export default function Home() {
   // We'll start on explicit user tap.
 
   useEffect(() => {
-    debugLog('mounted', { ua: navigator.userAgent });
+    // Enable debug mode only when explicitly requested.
+    const sp = new URLSearchParams(window.location.search);
+    const enabled = sp.has('debug');
+    (globalThis as any).__SANSU_DEBUG__ = enabled;
+
+    debugLog('mounted', { ua: navigator.userAgent, debug: enabled });
 
     const onError = (ev: ErrorEvent) => {
       debugLog('window.error', { message: ev.message, filename: ev.filename, lineno: ev.lineno });
-      setLogTick((t) => t + 1);
+      if (enabled) setLogTick((t) => t + 1);
     };
     const onRej = (ev: PromiseRejectionEvent) => {
       debugLog('unhandledrejection', { reason: String((ev as any).reason ?? '') });
-      setLogTick((t) => t + 1);
+      if (enabled) setLogTick((t) => t + 1);
     };
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRej);
@@ -141,8 +139,9 @@ export default function Home() {
 
   // Refresh log viewer while open
   useEffect(() => {
-    if (!showLogs) return;
-    const id = window.setInterval(() => setLogTick((t) => t + 1), 400);
+    const enabled = Boolean((globalThis as any).__SANSU_DEBUG__);
+    if (!enabled || !showLogs) return;
+    const id = window.setInterval(() => setLogTick((t) => t + 1), 500);
     return () => window.clearInterval(id);
   }, [showLogs]);
 
@@ -279,12 +278,14 @@ export default function Home() {
             />
           </div>
 
-          <div className={styles.row}>
-            <label className={styles.label}>로그</label>
-            <button className={styles.smallBtn} onClick={() => setShowLogs((v) => !v)}>
-              {showLogs ? '숨기기' : '보기'}
-            </button>
-          </div>
+          {Boolean((globalThis as any).__SANSU_DEBUG__) && (
+            <div className={styles.row}>
+              <label className={styles.label}>로그</label>
+              <button className={styles.smallBtn} onClick={() => setShowLogs((v) => !v)}>
+                {showLogs ? '숨기기' : '보기'}
+              </button>
+            </div>
+          )}
 
           <div style={{ height: 12 }} />
 

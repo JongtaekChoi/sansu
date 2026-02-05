@@ -12,10 +12,15 @@ function getStore(): DebugLogEntry[] {
   return w.__SANSU_LOGS__ as DebugLogEntry[];
 }
 
+function isEnabled() {
+  const w = globalThis as any;
+  return Boolean(w.__SANSU_DEBUG__);
+}
+
 export function debugLog(msg: string, data?: any) {
+  if (!isEnabled()) return;
   const entry: DebugLogEntry = { t: Date.now(), msg, data };
   try {
-    // Keep console logging minimal; still useful for debugging "page unresponsive".
     // eslint-disable-next-line no-console
     console.log('[SANSU]', msg, data ?? '');
   } catch {
