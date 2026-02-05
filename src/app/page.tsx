@@ -2,12 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import LessonDefsJson from '@/specs/u1-1/lessonDefs.json';
-import GeneratorParamsJson from '@/specs/u1-1/generatorParams.json';
-
-import { debugLog, getDebugLogs } from '@/lib/debugLog';
-
-import { generateLesson } from '@/lib/u1-1/generate';
 import { mulberry32 } from '@/lib/u1-1/rng';
 import type { AddProblem, LessonDef } from '@/lib/u1-1/types';
 
@@ -20,6 +14,26 @@ import styles from './page.module.scss';
 type Feedback = {
   kind: 'none' | 'correct' | 'wrong';
 };
+
+type UnitSpec = {
+  lessonDefs: LessonDef[];
+  params: any;
+  generateLesson: typeof import('@/lib/u1-1/generate').generateLesson;
+};
+
+async function loadU11(): Promise<UnitSpec> {
+  const [lessonDefsJson, paramsJson, gen] = await Promise.all([
+    import('@/specs/u1-1/lessonDefs.json'),
+    import('@/specs/u1-1/generatorParams.json'),
+    import('@/lib/u1-1/generate'),
+  ]);
+
+  return {
+    lessonDefs: (lessonDefsJson as any).lessons as LessonDef[],
+    params: paramsJson as any,
+    generateLesson: gen.generateLesson,
+  };
+}
 
 function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain = 0.03) {
   try {
@@ -46,8 +60,11 @@ function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain 
 }
 
 export default function Home() {
-  const lessonDefs = (LessonDefsJson as { lessons: LessonDef[] }).lessons;
-  const params = GeneratorParamsJson as any;
+  const sp = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const safeMode = Boolean(sp?.get('safe'));
+
+  const [unit, setUnit] = useState<UnitSpec | null>(null);
+  const [unitError, setUnitError] = useState<string | null>(null);
 
   const [lessonId, setLessonId] = useState('U1-1-L01');
   const [seed, setSeed] = useState(12345);
@@ -63,94 +80,29 @@ export default function Home() {
   const [hintOpen, setHintOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [showLogs, setShowLogs] = useState(false);
-  const [logTick, setLogTick] = useState(0);
 
   const current = problems?.[index] ?? null;
 
-  function newLesson(nextLessonId = lessonId, nextSeed = seed) {
-    debugLog('newLesson:start', { nextLessonId, nextSeed });
-    setLogTick((t) => t + 1);
-    setIsGenerating(true);
-
-    // Schedule work to the next frame so the UI can paint the loader.
-    window.requestAnimationFrame(() => {
-      const t0 = performance.now();
-      try {
-        setError(null);
-        const ld = lessonDefs.find((l) => l.lessonId === nextLessonId);
-        if (!ld) throw new Error(`Lesson not found: ${nextLessonId}`);
-
-        const r = mulberry32(nextSeed);
-        const rk = recentKeys.slice();
-        const generated = generateLesson('U1-1', ld, params, r, rk);
-
-        debugLog('newLesson:generated', { count: generated.length, ms: Math.round(performance.now() - t0) });
-        setLogTick((t) => t + 1);
-
-        setRecentKeys(rk);
-        setProblems(generated);
-        setIndex(0);
-        setFeedback({ kind: 'none' });
-        setFxPulse('none');
-        setWrongOnce(false);
-        setHintOpen(false);
-      } catch (e: any) {
-        debugLog('newLesson:error', { message: String(e?.message ?? e) });
-        setLogTick((t) => t + 1);
-        setError(String(e?.message ?? e));
-        setProblems(null);
-      } finally {
-        setIsGenerating(false);
-        debugLog('newLesson:end', { ms: Math.round(performance.now() - t0) });
-        setLogTick((t) => t + 1);
-      }
-    });
-  }
-
-  // Mobile stability: do NOT auto-start on load.
-  // Some browsers can show "page unresponsive" if heavy work happens during hydration.
-  // We'll start on explicit user tap.
-
   useEffect(() => {
-    // Enable debug mode only when explicitly requested.
-    const sp = new URLSearchParams(window.location.search);
-    const enabled = sp.has('debug');
-    (globalThis as any).__SANSU_DEBUG__ = enabled;
+    // Load unit spec lazily after mount.
+    // If even this causes a hang, ?safe=1 will help isolate.
+    if (safeMode) return;
 
-    debugLog('mounted', { ua: navigator.userAgent, debug: enabled });
-
-    const onError = (ev: ErrorEvent) => {
-      debugLog('window.error', { message: ev.message, filename: ev.filename, lineno: ev.lineno });
-      if (enabled) setLogTick((t) => t + 1);
-    };
-    const onRej = (ev: PromiseRejectionEvent) => {
-      debugLog('unhandledrejection', { reason: String((ev as any).reason ?? '') });
-      if (enabled) setLogTick((t) => t + 1);
-    };
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onRej);
+    let cancelled = false;
+    loadU11()
+      .then((u) => {
+        if (cancelled) return;
+        setUnit(u);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setUnitError(String(e?.message ?? e));
+      });
 
     return () => {
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onRej);
+      cancelled = true;
     };
-  }, []);
-
-  // Refresh log viewer while open
-  useEffect(() => {
-    const enabled = Boolean((globalThis as any).__SANSU_DEBUG__);
-    if (!enabled || !showLogs) return;
-    const id = window.setInterval(() => setLogTick((t) => t + 1), 500);
-    return () => window.clearInterval(id);
-  }, [showLogs]);
-
-  // Restart when lesson changes (but only if already started).
-  useEffect(() => {
-    debugLog('lessonId_changed', { lessonId });
-    if (problems) newLesson(lessonId, seed);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessonId]);
+  }, [safeMode]);
 
   function fxOk() {
     playTone(880, 90, 'sine', 0.035);
@@ -163,6 +115,39 @@ export default function Home() {
     playTone(220, 140, 'triangle', 0.03);
     setFxPulse('no');
     window.setTimeout(() => setFxPulse('none'), 220);
+  }
+
+  function newLesson(nextLessonId = lessonId, nextSeed = seed) {
+    if (!unit) return;
+
+    setIsGenerating(true);
+    window.requestAnimationFrame(() => {
+      const t0 = performance.now();
+      try {
+        setError(null);
+        const ld = unit.lessonDefs.find((l) => l.lessonId === nextLessonId);
+        if (!ld) throw new Error(`Lesson not found: ${nextLessonId}`);
+
+        const r = mulberry32(nextSeed);
+        const rk = recentKeys.slice();
+        const generated = unit.generateLesson('U1-1', ld, unit.params, r, rk);
+
+        setRecentKeys(rk);
+        setProblems(generated);
+        setIndex(0);
+        setFeedback({ kind: 'none' });
+        setFxPulse('none');
+        setWrongOnce(false);
+        setHintOpen(false);
+
+        void t0;
+      } catch (e: any) {
+        setError(String(e?.message ?? e));
+        setProblems(null);
+      } finally {
+        setIsGenerating(false);
+      }
+    });
   }
 
   function answerWith(n: number) {
@@ -189,14 +174,22 @@ export default function Home() {
 
   function openHint() {
     if (!current) return;
-    // Text hint intentionally removed. Future: SVG block animations.
     void hintRandRef.current;
     setHintOpen(true);
     setFeedback({ kind: 'none' });
     setFxPulse('none');
   }
 
-  const lessonOptions = useMemo(() => lessonDefs.map((l) => l.lessonId), [lessonDefs]);
+  const lessonOptions = useMemo(() => unit?.lessonDefs.map((l) => l.lessonId) ?? [], [unit]);
+
+  if (safeMode) {
+    return (
+      <main style={{ padding: 24, color: 'white', fontFamily: 'system-ui' }}>
+        SAFE MODE<br />
+        If this renders instantly, the hang is in unit loading or generation.
+      </main>
+    );
+  }
 
   return (
     <div className={styles.shell}>
@@ -208,6 +201,7 @@ export default function Home() {
           </div>
         </div>
       )}
+
       <div className={styles.board}>
         <Stage pulse={fxPulse}>
           <div className={styles.hud}>
@@ -257,9 +251,16 @@ export default function Home() {
 
       <div className={styles.controls}>
         <div className={styles.panel}>
+          {unitError && (
+            <div className={styles.errorBox}>
+              <div className={styles.errorTitle}>로딩 오류</div>
+              <div className={styles.errorMsg}>{unitError}</div>
+            </div>
+          )}
+
           <div className={styles.row}>
             <label className={styles.label}>레슨</label>
-            <select className={styles.select} value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
+            <select className={styles.select} value={lessonId} onChange={(e) => setLessonId(e.target.value)} disabled={!unit}>
               {lessonOptions.map((id) => (
                 <option key={id} value={id}>
                   {id}
@@ -278,15 +279,6 @@ export default function Home() {
             />
           </div>
 
-          {Boolean((globalThis as any).__SANSU_DEBUG__) && (
-            <div className={styles.row}>
-              <label className={styles.label}>로그</label>
-              <button className={styles.smallBtn} onClick={() => setShowLogs((v) => !v)}>
-                {showLogs ? '숨기기' : '보기'}
-              </button>
-            </div>
-          )}
-
           <div style={{ height: 12 }} />
 
           {error && (
@@ -296,24 +288,10 @@ export default function Home() {
             </div>
           )}
 
-          {showLogs && (
-            <div className={styles.logBox}>
-              {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-              {logTick >= 0 &&
-                getDebugLogs()
-                  .slice(-30)
-                  .map((e, i) => (
-                    <div key={i} className={styles.logLine}>
-                      {new Date(e.t).toLocaleTimeString()} · {e.msg}
-                    </div>
-                  ))}
-            </div>
-          )}
-
           {current?.choices ? (
             <Choices choices={current.choices} onPick={answerWith} />
           ) : (
-            <div className={styles.mutedHelp}>아래 ‘시작’을 눌러</div>
+            <div className={styles.mutedHelp}>{unit ? '시작' : '불러오는 중…'}</div>
           )}
 
           <div style={{ height: 10 }} />
@@ -321,7 +299,7 @@ export default function Home() {
           <div className={styles.smallBtnRow}>
             <button
               className={styles.smallBtn}
-              disabled={isGenerating}
+              disabled={!unit || isGenerating}
               onClick={() => {
                 const next = seed + 1;
                 setSeed(next);
@@ -330,7 +308,7 @@ export default function Home() {
             >
               새로 뽑기
             </button>
-            <button className={styles.smallBtn} disabled={isGenerating} onClick={() => newLesson()}>
+            <button className={styles.smallBtn} disabled={!unit || isGenerating} onClick={() => newLesson()}>
               시작
             </button>
           </div>
