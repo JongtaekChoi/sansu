@@ -70,16 +70,26 @@ function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain 
 export default function Home() {
   const [safeMode, setSafeMode] = useState(false);
   const [devMode, setDevMode] = useState(false);
+  const [autoStart, setAutoStart] = useState(false);
 
   useEffect(() => {
     try {
       const sp = new URLSearchParams(location.search);
       setSafeMode(sp.has('safe'));
       setDevMode(sp.has('dev'));
+      setAutoStart(sp.has('autostart'));
+
+      const urlLesson = sp.get('lesson');
+      const urlSeed = sp.get('seed');
+
+      if (urlLesson) setLessonId(urlLesson);
+      if (urlSeed && /^\d+$/.test(urlSeed)) setSeed(Number(urlSeed));
     } catch {
       setSafeMode(false);
       setDevMode(false);
+      setAutoStart(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [unit, setUnit] = useState<UnitSpec | null>(null);
@@ -139,6 +149,20 @@ export default function Home() {
       clearTimeout(watchdog);
     };
   }, [safeMode]);
+
+  // Optional auto-start for shareable URLs
+  useEffect(() => {
+    if (!autoStart) return;
+    if (safeMode) return;
+    if (!unit) return;
+    if (completed) return;
+
+    // start once
+    if (!problems) {
+      newLesson(lessonId, seed);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, unit]);
 
   function fxOk() {
     playTone(880, 90, 'sine', 0.035);
