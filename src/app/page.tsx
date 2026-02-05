@@ -71,6 +71,7 @@ export default function Home() {
   const [safeMode, setSafeMode] = useState(false);
   const [devMode, setDevMode] = useState(false);
   const [autoStart, setAutoStart] = useState(false);
+  const [startIndex, setStartIndex] = useState(0);
 
   useEffect(() => {
     try {
@@ -81,9 +82,11 @@ export default function Home() {
 
       const urlLesson = sp.get('lesson');
       const urlSeed = sp.get('seed');
+      const urlI = sp.get('i');
 
       if (urlLesson) setLessonId(urlLesson);
       if (urlSeed && /^\d+$/.test(urlSeed)) setSeed(Number(urlSeed));
+      if (urlI && /^\d+$/.test(urlI)) setStartIndex(Number(urlI));
     } catch {
       setSafeMode(false);
       setDevMode(false);
@@ -105,6 +108,20 @@ export default function Home() {
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
   const [problems, setProblems] = useState<AddProblem[] | null>(null);
   const [index, setIndex] = useState(0);
+
+  function updateUrl(next: { lesson?: string; seed?: number; i?: number }) {
+    try {
+      const sp = new URLSearchParams(location.search);
+      if (next.lesson != null) sp.set('lesson', next.lesson);
+      if (next.seed != null) sp.set('seed', String(next.seed));
+      if (next.i != null) sp.set('i', String(next.i));
+      const qs = sp.toString();
+      const url = `${location.pathname}${qs ? `?${qs}` : ''}`;
+      history.replaceState(history.state, '', url);
+    } catch {
+      // ignore
+    }
+  }
   const [feedback, setFeedback] = useState<Feedback>({ kind: 'none' });
   const [fxPulse, setFxPulse] = useState<StagePulse>('none');
   const [wrongOnce, setWrongOnce] = useState(false);
@@ -164,6 +181,12 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart, unit]);
 
+  // Keep URL in sync when lesson/seed changes (shareable state)
+  useEffect(() => {
+    updateUrl({ lesson: lessonId, seed });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId, seed]);
+
   function fxOk() {
     playTone(880, 90, 'sine', 0.035);
     setTimeout(() => playTone(1175, 110, 'sine', 0.03), 90);
@@ -198,8 +221,10 @@ export default function Home() {
 
         setRecentKeys(rk);
         setProblems(generated);
-        setIndex(0);
+        const i0 = Math.max(0, Math.min(startIndex, generated.length - 1));
+        setIndex(i0);
         setCompleted(false);
+        updateUrl({ lesson: nextLessonId, seed: nextSeed, i: i0 });
         setFeedback({ kind: 'none' });
         setFxPulse('none');
         setWrongOnce(false);
@@ -232,7 +257,11 @@ export default function Home() {
         if (isLast) {
           setCompleted(true);
         } else {
-          setIndex((i) => i + 1);
+          setIndex((i) => {
+            const ni = i + 1;
+            updateUrl({ lesson: lessonId, seed, i: ni });
+            return ni;
+          });
         }
       }, 950);
       return;
