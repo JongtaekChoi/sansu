@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import LessonDefsJson from '@/specs/u1-1/lessonDefs.json';
 import GeneratorParamsJson from '@/specs/u1-1/generatorParams.json';
 
+import { debugLog, getDebugLogs } from '@/lib/debugLog';
+
 import { generateLesson } from '@/lib/u1-1/generate';
 import { mulberry32 } from '@/lib/u1-1/rng';
 import type { AddProblem, LessonDef } from '@/lib/u1-1/types';
@@ -43,7 +45,14 @@ function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain 
   }
 }
 
+if (typeof window !== 'undefined') {
+  debugLog('module_loaded', { path: '/src/app/page.tsx' });
+}
+
 export default function Home() {
+  if (typeof window !== 'undefined') {
+    debugLog('render');
+  }
   const lessonDefs = (LessonDefsJson as { lessons: LessonDef[] }).lessons;
   const params = GeneratorParamsJson as any;
 
@@ -61,15 +70,17 @@ export default function Home() {
   const [hintOpen, setHintOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
 
   const current = problems?.[index] ?? null;
 
   function newLesson(nextLessonId = lessonId, nextSeed = seed) {
-    // Avoid blocking the main thread during hydration; show a loading overlay.
+    debugLog('newLesson:start', { nextLessonId, nextSeed });
     setIsGenerating(true);
 
     // Schedule work to the next frame so the UI can paint the loader.
     window.requestAnimationFrame(() => {
+      const t0 = performance.now();
       try {
         setError(null);
         const ld = lessonDefs.find((l) => l.lessonId === nextLessonId);
@@ -79,6 +90,8 @@ export default function Home() {
         const rk = recentKeys.slice();
         const generated = generateLesson('U1-1', ld, params, r, rk);
 
+        debugLog('newLesson:generated', { count: generated.length, ms: Math.round(performance.now() - t0) });
+
         setRecentKeys(rk);
         setProblems(generated);
         setIndex(0);
@@ -87,10 +100,12 @@ export default function Home() {
         setWrongOnce(false);
         setHintOpen(false);
       } catch (e: any) {
+        debugLog('newLesson:error', { message: String(e?.message ?? e) });
         setError(String(e?.message ?? e));
         setProblems(null);
       } finally {
         setIsGenerating(false);
+        debugLog('newLesson:end', { ms: Math.round(performance.now() - t0) });
       }
     });
   }
@@ -99,8 +114,27 @@ export default function Home() {
   // Some browsers can show "page unresponsive" if heavy work happens during hydration.
   // We'll start on explicit user tap.
 
+  useEffect(() => {
+    debugLog('mounted', { ua: navigator.userAgent });
+
+    const onError = (ev: ErrorEvent) => {
+      debugLog('window.error', { message: ev.message, filename: ev.filename, lineno: ev.lineno });
+    };
+    const onRej = (ev: PromiseRejectionEvent) => {
+      debugLog('unhandledrejection', { reason: String((ev as any).reason ?? '') });
+    };
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRej);
+
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRej);
+    };
+  }, []);
+
   // Restart when lesson changes (but only if already started).
   useEffect(() => {
+    debugLog('lessonId_changed', { lessonId });
     if (problems) newLesson(lessonId, seed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId]);
@@ -231,12 +265,31 @@ export default function Home() {
             />
           </div>
 
+          <div className={styles.row}>
+            <label className={styles.label}>로그</label>
+            <button className={styles.smallBtn} onClick={() => setShowLogs((v) => !v)}>
+              {showLogs ? '숨기기' : '보기'}
+            </button>
+          </div>
+
           <div style={{ height: 12 }} />
 
           {error && (
             <div className={styles.errorBox}>
               <div className={styles.errorTitle}>오류</div>
               <div className={styles.errorMsg}>{error}</div>
+            </div>
+          )}
+
+          {showLogs && (
+            <div className={styles.logBox}>
+              {getDebugLogs()
+                .slice(-30)
+                .map((e, i) => (
+                  <div key={i} className={styles.logLine}>
+                    {new Date(e.t).toLocaleTimeString()} · {e.msg}
+                  </div>
+                ))}
             </div>
           )}
 

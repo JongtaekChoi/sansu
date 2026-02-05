@@ -260,6 +260,24 @@
   word-break: break-word;
 }
 
+.logBox {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px;
+  margin-bottom: 12px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.logLine {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 2px 0;
+}
+
 @media (orientation: portrait) {
   .shell {
     flex-direction: column;
