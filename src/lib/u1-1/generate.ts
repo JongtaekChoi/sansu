@@ -88,6 +88,7 @@ export function buildChoiceOptions(
 
 function pickPairForLesson(lesson: LessonDef, params: GeneratorParams, rand: () => number) {
   const maxSum = lesson.maxSum;
+  const minNonZero = 1; // MVP rule: remove +0 entirely
 
   // determine a,b via simple focus rules
   const focus = lesson.focus;
@@ -102,23 +103,26 @@ function pickPairForLesson(lesson: LessonDef, params: GeneratorParams, rand: () 
     let a = 0;
     let b = 0;
 
+    // NOTE: We no longer generate +0 problems in MVP.
+    // If lessonDefs still contain ZERO-related focus values, we treat them as ONE/MIX equivalents.
+
     if (focus === 'ZERO') {
-      b = 0;
-      a = Math.floor(rand() * (maxSum + 1));
+      b = 1;
+      a = minNonZero + Math.floor(rand() * Math.max(1, maxSum - b));
     } else if (focus === 'ONE') {
       b = 1;
-      a = Math.floor(rand() * maxSum);
+      a = minNonZero + Math.floor(rand() * Math.max(1, maxSum - b));
     } else if (focus === 'ZERO_ONE_MIX' || focus === 'MIX_WITH_ONE') {
-      b = rand() < 0.5 ? 0 : 1;
-      a = Math.floor(rand() * (maxSum - b + 1));
+      b = 1;
+      a = minNonZero + Math.floor(rand() * Math.max(1, maxSum - b));
     } else if (focus === 'SMALL_2_3' || focus === 'SMALL_4_5' || focus === 'MIX_WITH_2_3') {
       const preferred = pickPreferredSmall();
       b = preferred ?? (2 + Math.floor(rand() * 2));
-      a = Math.floor(rand() * (maxSum - b + 1));
+      a = minNonZero + Math.floor(rand() * Math.max(1, maxSum - b));
     } else {
       // SUM_LE_*, REVIEW, MIX, CAPSTONE
-      a = Math.floor(rand() * (maxSum + 1));
-      b = Math.floor(rand() * (maxSum + 1));
+      a = minNonZero + Math.floor(rand() * Math.max(1, maxSum - minNonZero + 1));
+      b = minNonZero + Math.floor(rand() * Math.max(1, maxSum - minNonZero + 1));
     }
 
     // normalize + enforce sum constraint
