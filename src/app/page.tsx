@@ -261,6 +261,14 @@ export default function Home() {
               <div className={styles.hero}>
                 <div className={styles.title}>U1-1</div>
                 <div className={styles.subtitle}>0~10 덧셈</div>
+                <div style={{ height: 16 }} />
+                <button
+                  className={styles.startBtn}
+                  disabled={!unit || unitLoading || isGenerating}
+                  onClick={() => newLesson()}
+                >
+                  시작하기
+                </button>
               </div>
             ) : (
               <>

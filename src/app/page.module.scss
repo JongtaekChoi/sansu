@@ -279,6 +279,21 @@
   touch-action: manipulation;
 }
 
+.startBtn {
+  height: 56px;
+  padding: 0 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(124, 92, 255, 0.5);
+  background: rgba(124, 92, 255, 0.22);
+  color: var(--text);
+  font-weight: 1000;
+  font-size: 18px;
+}
+
+.startBtn:disabled {
+  opacity: 0.5;
+}
+
 .mutedHelp {
   color: var(--muted);
   font-weight: 800;
