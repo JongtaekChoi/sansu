@@ -13,6 +13,7 @@ function keyOf(a: number, b: number) {
 
 function chooseUi(index: number, params: GeneratorParams): ProblemUiType {
   // Default: first N are choice, rest keypad
+  // (MVP currently uses all choice by setting choiceCount=problemCount)
   return index < params.lesson.choiceCount ? 'choice' : 'keypad';
 }
 

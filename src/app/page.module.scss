@@ -1,0 +1,207 @@
+.shell {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.board {
+  flex: 1;
+  min-width: 0;
+}
+
+.controls {
+  width: 360px;
+  max-width: 46vw;
+}
+
+.panel {
+  height: 100%;
+  border-radius: 18px;
+  background: rgba(19, 26, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px;
+  overflow: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.label {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.select,
+.input {
+  width: 220px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  padding: 0 10px;
+  font-weight: 800;
+}
+
+.hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.pill {
+  pointer-events: none;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 900;
+}
+
+.center {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 18px 18px;
+}
+
+.hero {
+  text-align: center;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.subtitle {
+  margin-top: 10px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.problem {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.expr {
+  font-size: 72px;
+}
+
+.op {
+  color: rgba(124, 92, 255, 0.95);
+}
+
+.eq {
+  font-size: 64px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.q {
+  font-size: 72px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.below {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.hintBtn {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 92, 255, 0.4);
+  background: rgba(124, 92, 255, 0.18);
+  color: var(--text);
+  font-weight: 900;
+}
+
+.hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px;
+}
+
+.hintCard {
+  margin: 0 auto;
+  max-width: 620px;
+  border-radius: 18px;
+  background: rgba(10, 14, 26, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 14px;
+  backdrop-filter: blur(8px);
+}
+
+.hintCanvas {
+  height: 220px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hintClose {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-weight: 900;
+  margin-top: 10px;
+}
+
+.smallBtnRow {
+  display: flex;
+  gap: 10px;
+}
+
+.smallBtn {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-weight: 800;
+  touch-action: manipulation;
+}
+
+.mutedHelp {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+@media (orientation: portrait) {
+  .shell {
+    flex-direction: column;
+  }
+
+  .controls {
+    width: 100%;
+    max-width: 100%;
+  }
+}
