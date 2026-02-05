@@ -114,6 +114,13 @@ export function generateLesson(
   rand: () => number,
   recentKeys: string[],
 ): AddProblem[] {
+  // Runtime guards (protect UI from hangs when params are malformed)
+  if (!Number.isFinite(params.lesson.problemCount) || params.lesson.problemCount <= 0) {
+    throw new Error('Invalid generator params: lesson.problemCount');
+  }
+  if (!Number.isFinite(lesson.maxSum)) {
+    throw new Error('Invalid lessonDef: maxSum');
+  }
   const problems: AddProblem[] = [];
   const used = new Set<string>();
 

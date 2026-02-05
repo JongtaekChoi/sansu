@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { mulberry32 } from '@/lib/u1-1/rng';
-import type { AddProblem, LessonDef } from '@/lib/u1-1/types';
+import type { AddProblem, LessonDef, GeneratorParams } from '@/lib/u1-1/types';
+import { GeneratorParamsSchema, LessonDefsFileSchema } from '@/lib/u1-1/schema';
 
 import { Choices } from '@/components/Choices';
 import { ProgressDots } from '@/components/ProgressDots';
@@ -17,20 +18,27 @@ type Feedback = {
 
 type UnitSpec = {
   lessonDefs: LessonDef[];
-  params: any;
+  params: GeneratorParams;
   generateLesson: typeof import('@/lib/u1-1/generate').generateLesson;
 };
 
 async function loadU11(): Promise<UnitSpec> {
-  const [lessonDefsJson, paramsJson, gen] = await Promise.all([
+  const [lessonDefsMod, paramsMod, gen] = await Promise.all([
     import('@/specs/u1-1/lessonDefs.json'),
     import('@/specs/u1-1/generatorParams.json'),
     import('@/lib/u1-1/generate'),
   ]);
 
+  // Dynamic JSON import yields `{ default: ... }` in many bundlers.
+  const lessonDefsRaw = (lessonDefsMod as any).default ?? lessonDefsMod;
+  const paramsRaw = (paramsMod as any).default ?? paramsMod;
+
+  const lessonDefsFile = LessonDefsFileSchema.parse(lessonDefsRaw);
+  const paramsFile = GeneratorParamsSchema.parse(paramsRaw);
+
   return {
-    lessonDefs: (lessonDefsJson as any).lessons as LessonDef[],
-    params: paramsJson as any,
+    lessonDefs: lessonDefsFile.lessons,
+    params: paramsFile,
     generateLesson: gen.generateLesson,
   };
 }
@@ -60,8 +68,16 @@ function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain 
 }
 
 export default function Home() {
-  const sp = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const safeMode = Boolean(sp?.get('safe'));
+  const [safeMode, setSafeMode] = useState(false);
+
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      setSafeMode(sp.has('safe'));
+    } catch {
+      setSafeMode(false);
+    }
+  }, []);
 
   const [unit, setUnit] = useState<UnitSpec | null>(null);
   const [unitError, setUnitError] = useState<string | null>(null);
@@ -70,6 +86,7 @@ export default function Home() {
   const [lessonId, setLessonId] = useState('U1-1-L01');
   const [seed, setSeed] = useState(12345);
 
+  // reserved for future hint animations (keep deterministic RNG around)
   const hintRandRef = useRef(mulberry32(seed ^ 0x9e3779b9));
 
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
@@ -146,6 +163,9 @@ export default function Home() {
         const r = mulberry32(nextSeed);
         const rk = recentKeys.slice();
         const generated = unit.generateLesson('U1-1', ld, unit.params, r, rk);
+        if (!Array.isArray(generated) || generated.length === 0) {
+          throw new Error('문제를 생성하지 못했어');
+        }
 
         setRecentKeys(rk);
         setProblems(generated);
