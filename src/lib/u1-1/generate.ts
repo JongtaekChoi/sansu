@@ -50,15 +50,40 @@ export function buildChoiceOptions(
     if (v !== answer) distractors.push(v);
   }
 
-  // fallback if not enough
-  let count = 0;
-  while (distractors.length < 3) {
-    const v = clamp(answer + (Math.floor(rand() * 10) - 2), min, max);
-    if (v !== answer && !distractors.includes(v)) distractors.push(v);
-    if (10 < count++) break;
+  // fallback #1: random fill within [min,max] but deterministic bounded
+  if (distractors.length < 3) {
+    const pool: number[] = [];
+    for (let v = min; v <= max; v++) {
+      if (v !== answer && !distractors.includes(v)) pool.push(v);
+    }
+    for (const v of shuffle(pool, rand)) {
+      if (distractors.length >= 3) break;
+      distractors.push(v);
+    }
   }
 
-  return shuffle([answer, ...distractors], rand);
+  // fallback #2 (extreme edge): expand range a bit, still clamped to non-negative
+  if (distractors.length < 3) {
+    const eMin = Math.max(0, min - 5);
+    const eMax = max + 5;
+    const pool: number[] = [];
+    for (let v = eMin; v <= eMax; v++) {
+      if (v !== answer && !distractors.includes(v)) pool.push(v);
+    }
+    for (const v of shuffle(pool, rand)) {
+      if (distractors.length >= 3) break;
+      distractors.push(v);
+    }
+  }
+
+  // last resort: allow duplicates (never hang)
+  while (distractors.length < 3) {
+    const v = clamp(answer + (Math.floor(rand() * 11) - 5), min, max);
+    if (v !== answer) distractors.push(v);
+    else distractors.push(clamp(answer + 1, min, max));
+  }
+
+  return shuffle([answer, ...distractors.slice(0, 3)], rand);
 }
 
 function pickPairForLesson(lesson: LessonDef, params: GeneratorParams, rand: () => number) {
@@ -146,8 +171,11 @@ export function generateLesson(
       const { a, b } = pickPairForLesson(lesson, params, rand);
       const k = keyOf(a, b);
 
-      if (params.antiRepeat.noDuplicateInLesson && used.has(k)) continue;
-      if (recentSet.has(k)) continue;
+      // If the available unique space is too small (e.g. maxSum very small),
+      // strict de-dup can make generation impossible. We relax de-dup after enough attempts.
+      const relaxDedup = attempt >= 250;
+      if (params.antiRepeat.noDuplicateInLesson && used.has(k) && !relaxDedup) continue;
+      if (recentSet.has(k) && !relaxDedup) continue;
 
       const ui = chooseUi(i, params);
       const answer = a + b;

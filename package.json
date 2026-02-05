@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier -w ."
+    "format": "prettier -w .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "next": "^15.1.0",
@@ -24,6 +26,7 @@
     "eslint-config-next": "^15.1.0",
     "prettier": "^3.4.2",
     "sass": "^1.97.3",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
   }
 }
