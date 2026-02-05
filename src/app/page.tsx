@@ -71,11 +71,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [logTick, setLogTick] = useState(0);
 
   const current = problems?.[index] ?? null;
 
   function newLesson(nextLessonId = lessonId, nextSeed = seed) {
     debugLog('newLesson:start', { nextLessonId, nextSeed });
+    setLogTick((t) => t + 1);
     setIsGenerating(true);
 
     // Schedule work to the next frame so the UI can paint the loader.
@@ -91,6 +93,7 @@ export default function Home() {
         const generated = generateLesson('U1-1', ld, params, r, rk);
 
         debugLog('newLesson:generated', { count: generated.length, ms: Math.round(performance.now() - t0) });
+        setLogTick((t) => t + 1);
 
         setRecentKeys(rk);
         setProblems(generated);
@@ -101,11 +104,13 @@ export default function Home() {
         setHintOpen(false);
       } catch (e: any) {
         debugLog('newLesson:error', { message: String(e?.message ?? e) });
+        setLogTick((t) => t + 1);
         setError(String(e?.message ?? e));
         setProblems(null);
       } finally {
         setIsGenerating(false);
         debugLog('newLesson:end', { ms: Math.round(performance.now() - t0) });
+        setLogTick((t) => t + 1);
       }
     });
   }
@@ -119,9 +124,11 @@ export default function Home() {
 
     const onError = (ev: ErrorEvent) => {
       debugLog('window.error', { message: ev.message, filename: ev.filename, lineno: ev.lineno });
+      setLogTick((t) => t + 1);
     };
     const onRej = (ev: PromiseRejectionEvent) => {
       debugLog('unhandledrejection', { reason: String((ev as any).reason ?? '') });
+      setLogTick((t) => t + 1);
     };
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRej);
@@ -131,6 +138,13 @@ export default function Home() {
       window.removeEventListener('unhandledrejection', onRej);
     };
   }, []);
+
+  // Refresh log viewer while open
+  useEffect(() => {
+    if (!showLogs) return;
+    const id = window.setInterval(() => setLogTick((t) => t + 1), 400);
+    return () => window.clearInterval(id);
+  }, [showLogs]);
 
   // Restart when lesson changes (but only if already started).
   useEffect(() => {
@@ -283,13 +297,15 @@ export default function Home() {
 
           {showLogs && (
             <div className={styles.logBox}>
-              {getDebugLogs()
-                .slice(-30)
-                .map((e, i) => (
-                  <div key={i} className={styles.logLine}>
-                    {new Date(e.t).toLocaleTimeString()} · {e.msg}
-                  </div>
-                ))}
+              {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
+              {logTick >= 0 &&
+                getDebugLogs()
+                  .slice(-30)
+                  .map((e, i) => (
+                    <div key={i} className={styles.logLine}>
+                      {new Date(e.t).toLocaleTimeString()} · {e.msg}
+                    </div>
+                  ))}
             </div>
           )}
 
