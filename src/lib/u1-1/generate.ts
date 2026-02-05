@@ -147,17 +147,21 @@ function factorPairs(n: number): Array<[number, number]> {
   return pairs;
 }
 
-function pickRenderCountSpec(answer: number, rand: () => number, color: ColorToken): RenderSpec {
-  // Randomly choose between dots and grid.
-  if (rand() < 0.5) {
-    // dots: pick perRow to look nice
+function pickRenderCountSpec(
+  answer: number,
+  rand: () => number,
+  color: ColorToken,
+  types: Array<'arrayDots' | 'gridRect'>,
+): RenderSpec {
+  const pickType = types.length ? types[Math.floor(rand() * types.length)] : undefined;
+
+  if (pickType === 'arrayDots' || (!pickType && rand() < 0.5)) {
     const perRow = answer <= 5 ? 5 : answer <= 8 ? 4 : 5;
     return { type: 'arrayDots', count: answer, perRow, fill: color };
   }
 
-  // grid: choose a factor pair; prefer more square-ish shapes
+  // gridRect
   const pairs = factorPairs(answer);
-  // score by squareness
   const scored = pairs
     .map(([r, c]) => ({ r, c, score: Math.abs(r - c) + (Math.min(r, c) === 1 ? 2 : 0) }))
     .sort((a, b) => a.score - b.score);
@@ -189,15 +193,43 @@ export function generateLesson(
   const MAX_TOTAL_TRIES = 20_000;
   let totalTries = 0;
 
-  // Mix in 1 render-count problem per lesson (U1: counting 1..min(10,maxSum))
-  const renderAnswerMax = Math.min(10, Math.max(1, lesson.maxSum));
-  const renderAnswer = 1 + Math.floor(rand() * renderAnswerMax);
-  const renderColor = pickColor(rand);
-  const renderSpec = pickRenderCountSpec(renderAnswer, rand, renderColor);
-  const renderChoices = buildChoiceOptions(0, 0, renderAnswer, params, rand);
-  problems.push({ kind: 'RENDER_CHOICE_COUNT', unitId, ui: 'choice', renderSpec, answer: renderAnswer, choices: renderChoices });
+  // Optional: mix in render-count problems by rate (do NOT fix position)
+  const rm = (params as any).renderMix as
+    | {
+        enabled: boolean;
+        rate: number;
+        maxPerLesson: number;
+        countMin: number;
+        countMax: number;
+        types: Array<'arrayDots' | 'gridRect'>;
+      }
+    | undefined;
 
-  for (let i = 1; i < params.lesson.problemCount; i++) {
+  const wantRender = Boolean(rm?.enabled) && rand() < (rm?.rate ?? 0);
+  const renderIndex = wantRender ? Math.floor(rand() * params.lesson.problemCount) : -1;
+  let renderPlaced = false;
+
+  for (let i = 0; i < params.lesson.problemCount; i++) {
+    // Optionally place a render-count problem at a random slot.
+    if (!renderPlaced && i === renderIndex && (rm?.maxPerLesson ?? 1) > 0) {
+      const minCount = Math.max(1, rm?.countMin ?? 1);
+      const maxCount = Math.max(minCount, Math.min(rm?.countMax ?? 10, Math.max(1, lesson.maxSum), 10));
+      const renderAnswer = minCount + Math.floor(rand() * (maxCount - minCount + 1));
+      const renderColor = pickColor(rand, undefined);
+      const renderSpec = pickRenderCountSpec(renderAnswer, rand, renderColor, rm?.types ?? ['arrayDots', 'gridRect']);
+      const renderChoices = buildChoiceOptions(0, 0, renderAnswer, params, rand);
+      problems.push({
+        kind: 'RENDER_CHOICE_COUNT',
+        unitId,
+        ui: 'choice',
+        renderSpec,
+        answer: renderAnswer,
+        choices: renderChoices,
+      });
+      renderPlaced = true;
+      continue;
+    }
+
     let placed = false;
 
     for (let attempt = 0; attempt < 400; attempt++) {

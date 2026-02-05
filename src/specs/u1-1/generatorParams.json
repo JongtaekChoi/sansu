@@ -19,5 +19,13 @@
   "antiRepeat": {
     "noDuplicateInLesson": true,
     "recentProblemCacheSize": 30
+  },
+  "renderMix": {
+    "enabled": true,
+    "rate": 0.3,
+    "maxPerLesson": 1,
+    "countMin": 1,
+    "countMax": 10,
+    "types": ["arrayDots", "gridRect"]
   }
 }
