@@ -248,7 +248,7 @@ export default function Home() {
       {current?.choices ? (
         <Choices choices={current.choices} onPick={answerWith} />
       ) : (
-        <div style={{ color: 'var(--muted)', fontWeight: 800 }}>시작을 눌러 문제를 생성해줘</div>
+        <div style={{ color: 'var(--muted)', fontWeight: 800 }}>시작</div>
       )}
 
       <div style={{ height: 10 }} />
@@ -267,7 +267,8 @@ export default function Home() {
         <button
           className="smallBtn"
           onClick={() => {
-            if (!problems) newLesson();
+            // Always (re)start.
+            newLesson();
           }}
         >
           시작
@@ -323,9 +324,9 @@ export default function Home() {
 
                 {hintOpen && (
                   <div className="hint" onClick={() => setHintOpen(false)}>
-                    <div className="hintCard">
+                    <div className="hintCard" onClick={(e) => e.stopPropagation()}>
                       {/* Hint text intentionally removed. Future: SVG block animation goes here. */}
-                      <div className="hintPlaceholder">(힌트 애니메이션 준비중)</div>
+                      <div className="hintCanvas" aria-hidden />
                       <button className="hintClose" onClick={() => setHintOpen(false)}>
                         닫기
                       </button>
@@ -520,12 +521,11 @@ export default function Home() {
           padding: 14px;
           backdrop-filter: blur(8px);
         }
-        .hintPlaceholder {
-          font-weight: 900;
-          font-size: 16px;
-          color: rgba(255, 255, 255, 0.7);
-          text-align: center;
-          padding: 24px 0;
+        .hintCanvas {
+          height: 220px;
+          border-radius: 14px;
+          border: 1px dashed rgba(255, 255, 255, 0.18);
+          background: rgba(255, 255, 255, 0.03);
         }
         .hintClose {
           width: 100%;
