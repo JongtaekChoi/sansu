@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import CopyKo from '@/specs/u1-1/copy_ko.json';
 import LessonDefsJson from '@/specs/u1-1/lessonDefs.json';
@@ -153,6 +153,18 @@ export default function Home() {
 
   const current = problems?.[index] ?? null;
 
+  // Auto-start: on mobile/tablet, removing one extra tap helps a lot.
+  useEffect(() => {
+    if (!problems) newLesson(lessonId, seed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // If lessonId changes, restart.
+  useEffect(() => {
+    if (problems) newLesson(lessonId, seed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
   function newLesson(nextLessonId = lessonId, nextSeed = seed) {
     const ld = lessonDefs.find((l) => l.lessonId === nextLessonId);
     if (!ld) return;
@@ -301,8 +313,8 @@ export default function Home() {
           <div className="center">
             {!current ? (
               <div className="hero">
-                <div className="title">{pickLine('lesson.start', rand)}</div>
-                <div className="subtitle">U1-1 (0~10 덧셈) 레슨을 시작해보자</div>
+                <div className="title">U1-1</div>
+                <div className="subtitle">0~10 덧셈</div>
               </div>
             ) : (
               <>
