@@ -65,6 +65,7 @@ export default function Home() {
 
   const [unit, setUnit] = useState<UnitSpec | null>(null);
   const [unitError, setUnitError] = useState<string | null>(null);
+  const [unitLoading, setUnitLoading] = useState(false);
 
   const [lessonId, setLessonId] = useState('U1-1-L01');
   const [seed, setSeed] = useState(12345);
@@ -89,6 +90,14 @@ export default function Home() {
     if (safeMode) return;
 
     let cancelled = false;
+    setUnitLoading(true);
+    setUnitError(null);
+
+    const watchdog = window.setTimeout(() => {
+      if (cancelled) return;
+      setUnitError('U1-1 로딩이 오래 걸려요. 새로고침하거나 잠시 후 다시 시도해줘.');
+    }, 4000);
+
     loadU11()
       .then((u) => {
         if (cancelled) return;
@@ -97,10 +106,16 @@ export default function Home() {
       .catch((e) => {
         if (cancelled) return;
         setUnitError(String(e?.message ?? e));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        window.clearTimeout(watchdog);
+        setUnitLoading(false);
       });
 
     return () => {
       cancelled = true;
+      window.clearTimeout(watchdog);
     };
   }, [safeMode]);
 
@@ -193,11 +208,11 @@ export default function Home() {
 
   return (
     <div className={styles.shell}>
-      {isGenerating && (
+      {(unitLoading || isGenerating) && (
         <div className={styles.loadingOverlay}>
           <div className={styles.loadingCard}>
             <div className={styles.spinner} />
-            <div className={styles.loadingText}>로딩…</div>
+            <div className={styles.loadingText}>{isGenerating ? '로딩…' : '준비중…'}</div>
           </div>
         </div>
       )}
@@ -291,7 +306,7 @@ export default function Home() {
           {current?.choices ? (
             <Choices choices={current.choices} onPick={answerWith} />
           ) : (
-            <div className={styles.mutedHelp}>{unit ? '시작' : '불러오는 중…'}</div>
+            <div className={styles.mutedHelp}>{unit ? '시작' : unitLoading ? '준비중…' : '시작'}</div>
           )}
 
           <div style={{ height: 10 }} />
