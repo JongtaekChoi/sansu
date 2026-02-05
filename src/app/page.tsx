@@ -45,7 +45,7 @@ async function loadU11(): Promise<UnitSpec> {
 
 function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain = 0.03) {
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioCtx = AudioContext || (window as any).webkitAudioContext;
     const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
@@ -58,7 +58,7 @@ function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain 
     g.connect(ctx.destination);
 
     osc.start();
-    window.setTimeout(() => {
+    setTimeout(() => {
       osc.stop();
       ctx.close();
     }, ms);
@@ -72,7 +72,7 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const sp = new URLSearchParams(window.location.search);
+      const sp = new URLSearchParams(location.search);
       setSafeMode(sp.has('safe'));
     } catch {
       setSafeMode(false);
@@ -110,7 +110,7 @@ export default function Home() {
     setUnitLoading(true);
     setUnitError(null);
 
-    const watchdog = window.setTimeout(() => {
+    const watchdog = setTimeout(() => {
       if (cancelled) return;
       setUnitError('U1-1 로딩이 오래 걸려요. 새로고침하거나 잠시 후 다시 시도해줘.');
     }, 4000);
@@ -126,34 +126,34 @@ export default function Home() {
       })
       .finally(() => {
         if (cancelled) return;
-        window.clearTimeout(watchdog);
+        clearTimeout(watchdog);
         setUnitLoading(false);
       });
 
     return () => {
       cancelled = true;
-      window.clearTimeout(watchdog);
+      clearTimeout(watchdog);
     };
   }, [safeMode]);
 
   function fxOk() {
     playTone(880, 90, 'sine', 0.035);
-    window.setTimeout(() => playTone(1175, 110, 'sine', 0.03), 90);
+    setTimeout(() => playTone(1175, 110, 'sine', 0.03), 90);
     setFxPulse('ok');
-    window.setTimeout(() => setFxPulse('none'), 180);
+    setTimeout(() => setFxPulse('none'), 180);
   }
 
   function fxNo() {
     playTone(220, 140, 'triangle', 0.03);
     setFxPulse('no');
-    window.setTimeout(() => setFxPulse('none'), 220);
+    setTimeout(() => setFxPulse('none'), 220);
   }
 
   function newLesson(nextLessonId = lessonId, nextSeed = seed) {
     if (!unit) return;
 
     setIsGenerating(true);
-    window.requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
       const t0 = performance.now();
       try {
         setError(null);
@@ -195,7 +195,7 @@ export default function Home() {
       setWrongOnce(false);
       setHintOpen(false);
 
-      window.setTimeout(() => {
+      setTimeout(() => {
         setFeedback({ kind: 'none' });
         setIndex((i) => Math.min(i + 1, 5));
       }, 420);

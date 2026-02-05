@@ -42,7 +42,6 @@ export function buildChoiceOptions(
     if (v === answer) continue;
     candidates.push(v);
   }
-
   // unique
   const uniq = Array.from(new Set(candidates));
   const distractors: number[] = [];
@@ -52,9 +51,11 @@ export function buildChoiceOptions(
   }
 
   // fallback if not enough
+  let count = 0;
   while (distractors.length < 3) {
-    const v = clamp(answer + (Math.floor(rand() * 5) - 2), min, max);
+    const v = clamp(answer + (Math.floor(rand() * 10) - 2), min, max);
     if (v !== answer && !distractors.includes(v)) distractors.push(v);
+    if (10 < count++) break;
   }
 
   return shuffle([answer, ...distractors], rand);
