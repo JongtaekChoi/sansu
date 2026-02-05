@@ -431,6 +431,12 @@ export default function Home() {
             />
           </div>
 
+          <div className={styles.smallBtnRow}>
+            <a className={styles.smallBtn} href="/docs/concept?dev=1">
+              문서
+            </a>
+          </div>
+
           <div style={{ height: 12 }} />
 
           {error && (

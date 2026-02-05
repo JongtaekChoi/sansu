@@ -1,0 +1,13 @@
+main :where(h1,h2,h3){
+  letter-spacing: -0.02em;
+}
+
+main h1{font-size:32px;margin-top:0}
+main h2{font-size:22px;margin-top:28px}
+main h3{font-size:18px;margin-top:22px}
+
+main p, main li{color: rgba(255,255,255,0.9); font-weight: 600;}
+main code{background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 8px;}
+main pre{background: rgba(255,255,255,0.06); padding: 12px; border-radius: 14px; overflow:auto;}
+main a{color: rgba(124,92,255,0.95)}
+main blockquote{border-left: 4px solid rgba(124,92,255,0.6); margin: 14px 0; padding: 4px 12px; color: rgba(255,255,255,0.8)}
