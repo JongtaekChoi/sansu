@@ -4,6 +4,51 @@
   display: flex;
   gap: 12px;
   padding: 12px;
+  position: relative;
+}
+
+.loadingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.loadingCard {
+  width: 180px;
+  height: 120px;
+  border-radius: 18px;
+  background: rgba(19, 26, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(124, 92, 255, 0.95);
+  animation: spin 0.9s linear infinite;
+}
+
+.loadingText {
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .board {

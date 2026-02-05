@@ -60,30 +60,39 @@ export default function Home() {
   const [wrongOnce, setWrongOnce] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const current = problems?.[index] ?? null;
 
   function newLesson(nextLessonId = lessonId, nextSeed = seed) {
-    try {
-      setError(null);
-      const ld = lessonDefs.find((l) => l.lessonId === nextLessonId);
-      if (!ld) throw new Error(`Lesson not found: ${nextLessonId}`);
+    // Avoid blocking the main thread during hydration; show a loading overlay.
+    setIsGenerating(true);
 
-      const r = mulberry32(nextSeed);
-      const rk = recentKeys.slice();
-      const generated = generateLesson('U1-1', ld, params, r, rk);
+    // Schedule work to the next frame so the UI can paint the loader.
+    window.requestAnimationFrame(() => {
+      try {
+        setError(null);
+        const ld = lessonDefs.find((l) => l.lessonId === nextLessonId);
+        if (!ld) throw new Error(`Lesson not found: ${nextLessonId}`);
 
-      setRecentKeys(rk);
-      setProblems(generated);
-      setIndex(0);
-      setFeedback({ kind: 'none' });
-      setFxPulse('none');
-      setWrongOnce(false);
-      setHintOpen(false);
-    } catch (e: any) {
-      setError(String(e?.message ?? e));
-      setProblems(null);
-    }
+        const r = mulberry32(nextSeed);
+        const rk = recentKeys.slice();
+        const generated = generateLesson('U1-1', ld, params, r, rk);
+
+        setRecentKeys(rk);
+        setProblems(generated);
+        setIndex(0);
+        setFeedback({ kind: 'none' });
+        setFxPulse('none');
+        setWrongOnce(false);
+        setHintOpen(false);
+      } catch (e: any) {
+        setError(String(e?.message ?? e));
+        setProblems(null);
+      } finally {
+        setIsGenerating(false);
+      }
+    });
   }
 
   // Mobile stability: do NOT auto-start on load.
@@ -144,6 +153,14 @@ export default function Home() {
 
   return (
     <div className={styles.shell}>
+      {isGenerating && (
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingCard}>
+            <div className={styles.spinner} />
+            <div className={styles.loadingText}>로딩…</div>
+          </div>
+        </div>
+      )}
       <div className={styles.board}>
         <Stage pulse={fxPulse}>
           <div className={styles.hud}>
@@ -234,6 +251,7 @@ export default function Home() {
           <div className={styles.smallBtnRow}>
             <button
               className={styles.smallBtn}
+              disabled={isGenerating}
               onClick={() => {
                 const next = seed + 1;
                 setSeed(next);
@@ -242,7 +260,7 @@ export default function Home() {
             >
               새로 뽑기
             </button>
-            <button className={styles.smallBtn} onClick={() => newLesson()}>
+            <button className={styles.smallBtn} disabled={isGenerating} onClick={() => newLesson()}>
               시작
             </button>
           </div>
