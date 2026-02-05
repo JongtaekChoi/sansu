@@ -59,33 +59,38 @@ export default function Home() {
   const [fxPulse, setFxPulse] = useState<StagePulse>('none');
   const [wrongOnce, setWrongOnce] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const current = problems?.[index] ?? null;
 
   function newLesson(nextLessonId = lessonId, nextSeed = seed) {
-    const ld = lessonDefs.find((l) => l.lessonId === nextLessonId);
-    if (!ld) return;
+    try {
+      setError(null);
+      const ld = lessonDefs.find((l) => l.lessonId === nextLessonId);
+      if (!ld) throw new Error(`Lesson not found: ${nextLessonId}`);
 
-    const r = mulberry32(nextSeed);
-    const rk = recentKeys.slice();
-    const generated = generateLesson('U1-1', ld, params, r, rk);
+      const r = mulberry32(nextSeed);
+      const rk = recentKeys.slice();
+      const generated = generateLesson('U1-1', ld, params, r, rk);
 
-    setRecentKeys(rk);
-    setProblems(generated);
-    setIndex(0);
-    setFeedback({ kind: 'none' });
-    setFxPulse('none');
-    setWrongOnce(false);
-    setHintOpen(false);
+      setRecentKeys(rk);
+      setProblems(generated);
+      setIndex(0);
+      setFeedback({ kind: 'none' });
+      setFxPulse('none');
+      setWrongOnce(false);
+      setHintOpen(false);
+    } catch (e: any) {
+      setError(String(e?.message ?? e));
+      setProblems(null);
+    }
   }
 
-  // Auto-start on first load.
-  useEffect(() => {
-    if (!problems) newLesson(lessonId, seed);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Mobile stability: do NOT auto-start on load.
+  // Some browsers can show "page unresponsive" if heavy work happens during hydration.
+  // We'll start on explicit user tap.
 
-  // Restart when lesson changes.
+  // Restart when lesson changes (but only if already started).
   useEffect(() => {
     if (problems) newLesson(lessonId, seed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,10 +216,17 @@ export default function Home() {
 
           <div style={{ height: 12 }} />
 
+          {error && (
+            <div className={styles.errorBox}>
+              <div className={styles.errorTitle}>오류</div>
+              <div className={styles.errorMsg}>{error}</div>
+            </div>
+          )}
+
           {current?.choices ? (
             <Choices choices={current.choices} onPick={answerWith} />
           ) : (
-            <div className={styles.mutedHelp}>시작</div>
+            <div className={styles.mutedHelp}>아래 ‘시작’을 눌러</div>
           )}
 
           <div style={{ height: 10 }} />

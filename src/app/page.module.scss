@@ -195,6 +195,26 @@
   font-weight: 800;
 }
 
+.errorBox {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 107, 107, 0.35);
+  background: rgba(255, 107, 107, 0.08);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.errorTitle {
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.errorMsg {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 700;
+  font-size: 13px;
+  word-break: break-word;
+}
+
 @media (orientation: portrait) {
   .shell {
     flex-direction: column;
