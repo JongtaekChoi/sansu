@@ -122,6 +122,50 @@
   align-items: center;
   justify-content: center;
   padding: 64px 18px 18px;
+  position: relative;
+}
+
+.answerPanel {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+}
+
+.completeOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.completeCard {
+  width: min(520px, calc(100% - 28px));
+  border-radius: 18px;
+  background: rgba(10, 14, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 18px;
+  text-align: center;
+}
+
+.completeTitle {
+  font-weight: 1000;
+  font-size: 28px;
+}
+
+.completeSub {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 800;
+}
+
+.completeBtns {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
 }
 
 .hero {

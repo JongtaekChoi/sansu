@@ -69,13 +69,16 @@ function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain 
 
 export default function Home() {
   const [safeMode, setSafeMode] = useState(false);
+  const [devMode, setDevMode] = useState(false);
 
   useEffect(() => {
     try {
       const sp = new URLSearchParams(location.search);
       setSafeMode(sp.has('safe'));
+      setDevMode(sp.has('dev'));
     } catch {
       setSafeMode(false);
+      setDevMode(false);
     }
   }, []);
 
@@ -98,6 +101,7 @@ export default function Home() {
   const [hintOpen, setHintOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   const current = problems?.[index] ?? null;
 
@@ -140,13 +144,14 @@ export default function Home() {
     playTone(880, 90, 'sine', 0.035);
     setTimeout(() => playTone(1175, 110, 'sine', 0.03), 90);
     setFxPulse('ok');
-    setTimeout(() => setFxPulse('none'), 180);
+    // keep the green state a bit longer
+    setTimeout(() => setFxPulse('none'), 650);
   }
 
   function fxNo() {
     playTone(220, 140, 'triangle', 0.03);
     setFxPulse('no');
-    setTimeout(() => setFxPulse('none'), 220);
+    setTimeout(() => setFxPulse('none'), 320);
   }
 
   function newLesson(nextLessonId = lessonId, nextSeed = seed) {
@@ -170,6 +175,7 @@ export default function Home() {
         setRecentKeys(rk);
         setProblems(generated);
         setIndex(0);
+        setCompleted(false);
         setFeedback({ kind: 'none' });
         setFxPulse('none');
         setWrongOnce(false);
@@ -195,10 +201,16 @@ export default function Home() {
       setWrongOnce(false);
       setHintOpen(false);
 
+      const isLast = index >= ((unit?.params.lesson.problemCount ?? 6) - 1);
+
       setTimeout(() => {
         setFeedback({ kind: 'none' });
-        setIndex((i) => Math.min(i + 1, 5));
-      }, 420);
+        if (isLast) {
+          setCompleted(true);
+        } else {
+          setIndex((i) => i + 1);
+        }
+      }, 950);
       return;
     }
 
@@ -268,6 +280,39 @@ export default function Home() {
                   )}
                 </div>
 
+                {/* Answers inside stage */}
+                {current.choices && !completed && (
+                  <div className={styles.answerPanel}>
+                    <Choices choices={current.choices} onPick={answerWith} />
+                  </div>
+                )}
+
+                {completed && (
+                  <div className={styles.completeOverlay}>
+                    <div className={styles.completeCard}>
+                      <div className={styles.completeTitle}>클리어</div>
+                      <div className={styles.completeSub}>다음 레슨으로 갈까?</div>
+                      <div className={styles.completeBtns}>
+                        <button
+                          className={styles.smallBtn}
+                          onClick={() => {
+                            // next lesson
+                            const idx = lessonOptions.indexOf(lessonId);
+                            const nextId = lessonOptions[Math.min(idx + 1, lessonOptions.length - 1)] ?? lessonId;
+                            setLessonId(nextId);
+                            newLesson(nextId, seed);
+                          }}
+                        >
+                          다음
+                        </button>
+                        <button className={styles.smallBtn} onClick={() => newLesson(lessonId, seed)}>
+                          다시
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {hintOpen && (
                   <div className={styles.hint} onClick={() => setHintOpen(false)}>
                     <div className={styles.hintCard} onClick={(e) => e.stopPropagation()}>
@@ -284,8 +329,9 @@ export default function Home() {
         </Stage>
       </div>
 
-      <div className={styles.controls}>
-        <div className={styles.panel}>
+      {devMode && (
+        <div className={styles.controls}>
+          <div className={styles.panel}>
           {unitError && (
             <div className={styles.errorBox}>
               <div className={styles.errorTitle}>로딩 오류</div>
@@ -323,11 +369,7 @@ export default function Home() {
             </div>
           )}
 
-          {current?.choices ? (
-            <Choices choices={current.choices} onPick={answerWith} />
-          ) : (
-            <div className={styles.mutedHelp}>{unit ? '시작' : unitLoading ? '준비중…' : '시작'}</div>
-          )}
+          <div className={styles.mutedHelp}>개발 패널</div>
 
           <div style={{ height: 10 }} />
 
@@ -347,8 +389,9 @@ export default function Home() {
               시작
             </button>
           </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
