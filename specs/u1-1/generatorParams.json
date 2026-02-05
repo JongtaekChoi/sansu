@@ -8,8 +8,8 @@
   },
   "lesson": {
     "problemCount": 6,
-    "choiceCount": 2,
-    "keypadCount": 4
+    "choiceCount": 6,
+    "keypadCount": 0
   },
   "choiceDistractors": {
     "candidates": ["ans-1", "ans+1", "abs(a-b)", "a", "b", "ans-2", "ans+2"],

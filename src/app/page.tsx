@@ -24,35 +24,10 @@ function pickLine(key: keyof typeof CopyKo, rand: () => number, vars?: Record<st
   return vars ? fmt(line, vars) : line;
 }
 
-function computeHint(problem: AddProblem, rand: () => number) {
-  const a = problem.a;
-  const b = problem.b;
-  const big = Math.max(a, b);
-  const small = Math.min(a, b);
-  const ans = problem.answer;
-
-  if (a === 0 || b === 0) {
-    return [
-      pickLine('hint.open', rand),
-      pickLine('hint.zero_rule', rand),
-      pickLine('hint.conclude', rand, { ans }),
-    ];
-  }
-
-  if (a === 1 || b === 1) {
-    return [
-      pickLine('hint.open', rand),
-      pickLine('hint.one_rule', rand),
-      pickLine('hint.conclude', rand, { ans }),
-    ];
-  }
-
-  return [
-    pickLine('hint.open', rand),
-    pickLine('hint.count_on', rand, { big }),
-    pickLine('hint.count_steps', rand, { small }),
-    pickLine('hint.conclude', rand, { ans }),
-  ];
+// Hints: text is intentionally removed (sound + visuals only).
+// We'll later replace this with SVG block animations.
+function computeHint() {
+  return [] as string[];
 }
 
 function Stage({ children, pulse }: { children: React.ReactNode; pulse: 'none' | 'ok' | 'no' }) {
@@ -120,68 +95,7 @@ function ProgressDots({ index }: { index: number }) {
   );
 }
 
-function Keypad({ value, onChange, onSubmit }: { value: string; onChange: (v: string) => void; onSubmit: () => void }) {
-  const buttons = ['1','2','3','4','5','6','7','8','9','0'];
-  return (
-    <div className="pad">
-      <div className="display">{value || ' '}</div>
-      <div className="grid">
-        {buttons.map((d) => (
-          <button key={d} className="btn" onClick={() => onChange((value + d).slice(0, 2))}>
-            {d}
-          </button>
-        ))}
-        <button className="btn ghost" onClick={() => onChange(value.slice(0, -1))}>지우기</button>
-        <button className="btn primary" onClick={onSubmit}>확인</button>
-      </div>
-      <style jsx>{`
-        .pad {
-          background: rgba(19, 26, 42, 0.9);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          padding: 12px;
-        }
-        .display {
-          height: 48px;
-          border-radius: 12px;
-          background: rgba(255, 255, 255, 0.06);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 26px;
-          font-weight: 800;
-          margin-bottom: 10px;
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 10px;
-        }
-        .btn {
-          height: 56px;
-          border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.06);
-          color: var(--text);
-          font-size: 20px;
-          font-weight: 800;
-          touch-action: manipulation;
-        }
-        .btn:active {
-          transform: translateY(1px);
-        }
-        .ghost {
-          grid-column: span 2;
-          background: rgba(255, 255, 255, 0.04);
-        }
-        .primary {
-          background: rgba(124, 92, 255, 0.95);
-          border-color: rgba(124, 92, 255, 0.95);
-        }
-      `}</style>
-    </div>
-  );
-}
+// Keypad UI is removed for now (multiple-choice only on tablets/phones).
 
 function Choices({ choices, onPick }: { choices: number[]; onPick: (n: number) => void }) {
   return (
@@ -232,12 +146,10 @@ export default function Home() {
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
   const [problems, setProblems] = useState<AddProblem[] | null>(null);
   const [index, setIndex] = useState(0);
-  const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState<Feedback>({ kind: 'none' });
   const [fxPulse, setFxPulse] = useState<'none' | 'ok' | 'no'>('none');
   const [wrongOnce, setWrongOnce] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
-  const [hintLines, setHintLines] = useState<string[]>([]);
 
   const current = problems?.[index] ?? null;
 
@@ -252,12 +164,10 @@ export default function Home() {
     setRecentKeys(rk);
     setProblems(generated);
     setIndex(0);
-    setInput('');
     setFeedback({ kind: 'none' });
     setFxPulse('none');
     setWrongOnce(false);
     setHintOpen(false);
-    setHintLines([]);
   }
 
   function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain = 0.03) {
@@ -307,12 +217,10 @@ export default function Home() {
       fxOk();
       setWrongOnce(false);
       setHintOpen(false);
-      setHintLines([]);
 
       // next after short delay
       window.setTimeout(() => {
         setFeedback({ kind: 'none' });
-        setInput('');
         setIndex((i) => Math.min(i + 1, 5));
       }, 420);
       return;
@@ -323,17 +231,9 @@ export default function Home() {
     setWrongOnce(true);
   }
 
-  function submitKeypad() {
-    const n = Number(input);
-    if (!Number.isFinite(n)) return;
-    answerWith(n);
-  }
-
   function openHint() {
     if (!current) return;
-    const hr = hintRandRef.current;
-    const lines = computeHint(current, hr);
-    setHintLines(lines);
+    // Text hint removed: reserve this overlay for future SVG block animations.
     setHintOpen(true);
     setFeedback({ kind: 'none' });
     setFxPulse('none');
@@ -345,10 +245,10 @@ export default function Home() {
 
   const control = (
     <>
-      {current?.ui === 'choice' && current.choices ? (
+      {current?.choices ? (
         <Choices choices={current.choices} onPick={answerWith} />
       ) : (
-        <Keypad value={input} onChange={setInput} onSubmit={submitKeypad} />
+        <div style={{ color: 'var(--muted)', fontWeight: 800 }}>시작을 눌러 문제를 생성해줘</div>
       )}
 
       <div style={{ height: 10 }} />
@@ -422,14 +322,10 @@ export default function Home() {
                 </div>
 
                 {hintOpen && (
-                  <div className="hint">
+                  <div className="hint" onClick={() => setHintOpen(false)}>
                     <div className="hintCard">
-                      {hintLines.map((l, i) => (
-                        <div key={i} className="hintLine">
-                          {l}
-                        </div>
-                      ))}
-                      <div style={{ height: 10 }} />
+                      {/* Hint text intentionally removed. Future: SVG block animation goes here. */}
+                      <div className="hintPlaceholder">(힌트 애니메이션 준비중)</div>
                       <button className="hintClose" onClick={() => setHintOpen(false)}>
                         닫기
                       </button>
@@ -624,10 +520,12 @@ export default function Home() {
           padding: 14px;
           backdrop-filter: blur(8px);
         }
-        .hintLine {
+        .hintPlaceholder {
           font-weight: 900;
-          font-size: 18px;
-          margin: 6px 0;
+          font-size: 16px;
+          color: rgba(255, 255, 255, 0.7);
+          text-align: center;
+          padding: 24px 0;
         }
         .hintClose {
           width: 100%;
