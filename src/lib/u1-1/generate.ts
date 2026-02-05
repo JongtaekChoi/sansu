@@ -117,13 +117,29 @@ export function generateLesson(
   const problems: AddProblem[] = [];
   const used = new Set<string>();
 
+  // Performance + safety: avoid O(n) includes in tight loops
+  const recentSet = new Set(recentKeys);
+
+  // Safety cap to prevent UI hangs if constraints become impossible
+  const MAX_TOTAL_TRIES = 20_000;
+  let totalTries = 0;
+
   for (let i = 0; i < params.lesson.problemCount; i++) {
-    for (let attempt = 0; attempt < 200; attempt++) {
+    let placed = false;
+
+    for (let attempt = 0; attempt < 400; attempt++) {
+      totalTries++;
+      if (totalTries > MAX_TOTAL_TRIES) {
+        throw new Error(
+          `generateLesson exceeded max tries (lesson=${lesson.lessonId}, stage=${lesson.stage}, focus=${lesson.focus}, i=${i})`,
+        );
+      }
+
       const { a, b } = pickPairForLesson(lesson, params, rand);
       const k = keyOf(a, b);
 
       if (params.antiRepeat.noDuplicateInLesson && used.has(k)) continue;
-      if (recentKeys.includes(k)) continue;
+      if (recentSet.has(k)) continue;
 
       const ui = chooseUi(i, params);
       const answer = a + b;
@@ -145,9 +161,20 @@ export function generateLesson(
       used.add(k);
 
       recentKeys.push(k);
-      while (recentKeys.length > params.antiRepeat.recentProblemCacheSize) recentKeys.shift();
+      recentSet.add(k);
+      while (recentKeys.length > params.antiRepeat.recentProblemCacheSize) {
+        const removed = recentKeys.shift();
+        if (removed) recentSet.delete(removed);
+      }
 
+      placed = true;
       break;
+    }
+
+    if (!placed) {
+      throw new Error(
+        `generateLesson could not place problem (lesson=${lesson.lessonId}, stage=${lesson.stage}, focus=${lesson.focus}, i=${i})`,
+      );
     }
   }
 
