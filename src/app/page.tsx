@@ -108,6 +108,15 @@ export default function Home() {
 
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
   const [problems, setProblems] = useState<AddProblem[] | null>(null);
+
+  // Problem progression
+  const [phase, setPhase] = useState<'main' | 'retry'>('main');
+  const [order, setOrder] = useState<number[]>([]); // indices into `problems`
+  const [cursor, setCursor] = useState(0);
+  const [retryQueue, setRetryQueue] = useState<number[]>([]);
+  const [wrongCounts, setWrongCounts] = useState<Record<number, number>>({});
+
+  // current base problem index (0..N-1)
   const [index, setIndex] = useState(0);
 
   function updateUrl(next: { lesson?: string; seed?: number; i?: number }) {
@@ -125,15 +134,16 @@ export default function Home() {
   }
   const [feedback, setFeedback] = useState<Feedback>({ kind: 'none' });
   const [fxPulse, setFxPulse] = useState<StagePulse>('none');
-  const [wrongOnce, setWrongOnce] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [revealCorrectIndex, setRevealCorrectIndex] = useState<number | null>(null);
 
-  const current = problems?.[index] ?? null;
+  const currentIndex = order.length ? order[cursor] ?? 0 : 0;
+  const current = problems?.[currentIndex] ?? null;
 
   useEffect(() => {
     // Load unit spec lazily after mount.
@@ -224,15 +234,23 @@ export default function Home() {
 
         setRecentKeys(rk);
         setProblems(generated);
+        const mainOrder = generated.map((_, i) => i);
+        setOrder(mainOrder);
+        setPhase('main');
+        setCursor(0);
+        setRetryQueue([]);
+        setWrongCounts({});
+
         const i0 = Math.max(0, Math.min(startIndex, generated.length - 1));
         setIndex(i0);
         setCompleted(false);
         setSelectedIndex(null);
         setIsConfirming(false);
+        setRevealCorrectIndex(null);
         updateUrl({ lesson: nextLessonId, seed: nextSeed, i: i0 });
         setFeedback({ kind: 'none' });
         setFxPulse('none');
-        setWrongOnce(false);
+        // wrongOnce removed (duolingo retry queue)
         setHintOpen(false);
 
         void t0;
@@ -245,6 +263,34 @@ export default function Home() {
     });
   }
 
+  function advanceNext() {
+    setSelectedIndex(null);
+    setIsConfirming(false);
+    setRevealCorrectIndex(null);
+
+    if (cursor + 1 < order.length) {
+      const nextCursor = cursor + 1;
+      const nextProblemIndex = order[nextCursor] ?? 0;
+      setCursor(nextCursor);
+      setIndex(nextProblemIndex);
+      updateUrl({ lesson: lessonId, seed, i: nextProblemIndex });
+      return;
+    }
+
+    // End of this phase
+    if (phase === 'main' && retryQueue.length > 0) {
+      setPhase('retry');
+      setOrder(retryQueue);
+      setCursor(0);
+      const first = retryQueue[0] ?? 0;
+      setIndex(first);
+      updateUrl({ lesson: lessonId, seed, i: first });
+      return;
+    }
+
+    setCompleted(true);
+  }
+
   function answerWith(n: number) {
     if (!current) return;
 
@@ -252,32 +298,60 @@ export default function Home() {
     if (ok) {
       setFeedback({ kind: 'correct' });
       fxOk();
-      setWrongOnce(false);
       setHintOpen(false);
-
-      const isLast = index >= ((unit?.params.lesson.problemCount ?? 6) - 1);
 
       setTimeout(() => {
         setFeedback({ kind: 'none' });
-        setSelectedIndex(null);
-        setIsConfirming(false);
-        if (isLast) {
-          setCompleted(true);
-        } else {
-          setIndex((i) => {
-            const ni = i + 1;
-            updateUrl({ lesson: lessonId, seed, i: ni });
-            return ni;
-          });
-        }
+        advanceNext();
       }, 950);
       return;
     }
 
+    // wrong
     setFeedback({ kind: 'wrong' });
     fxNo();
-    setWrongOnce(true);
-    setIsConfirming(false);
+    setHintOpen(false);
+
+    const baseIdx = currentIndex;
+
+    if (phase === 'main') {
+      setRetryQueue((q) => (q.includes(baseIdx) ? q : [...q, baseIdx]));
+      setIsConfirming(false);
+      setSelectedIndex(null);
+
+      // Duolingo-style: do not show the answer; skip forward
+      setTimeout(() => {
+        setFeedback({ kind: 'none' });
+        advanceNext();
+      }, 520);
+      return;
+    }
+
+    // retry phase: after 2 wrongs, reveal correct briefly then skip
+    setWrongCounts((m) => {
+      const next = { ...m };
+      next[baseIdx] = (next[baseIdx] ?? 0) + 1;
+      return next;
+    });
+
+    const wc = (wrongCounts[baseIdx] ?? 0) + 1;
+    if (wc >= 2 && current.choices) {
+      const correct = current.answer;
+      const ci = current.choices.findIndex((x) => x === correct);
+      if (ci >= 0) setRevealCorrectIndex(ci);
+
+      setTimeout(() => {
+        setFeedback({ kind: 'none' });
+        advanceNext();
+      }, 900);
+    } else {
+      setTimeout(() => {
+        setFeedback({ kind: 'none' });
+        // stay on same problem, allow retry
+        setSelectedIndex(null);
+        setIsConfirming(false);
+      }, 520);
+    }
   }
 
   function confirmChoice() {
@@ -300,6 +374,9 @@ export default function Home() {
     setHintOpen(true);
     setFeedback({ kind: 'none' });
     setFxPulse('none');
+
+    // auto close
+    setTimeout(() => setHintOpen(false), 900);
   }
 
   const lessonOptions = useMemo(() => unit?.lessonDefs.map((l) => l.lessonId) ?? [], [unit]);
@@ -365,11 +442,9 @@ export default function Home() {
                 </div>
 
                 <div className={styles.below}>
-                  {wrongOnce && !hintOpen && (
-                    <button className={styles.hintBtn} onClick={openHint}>
-                      힌트
-                    </button>
-                  )}
+                  <button className={styles.hintBtn} disabled={hintOpen} onClick={openHint}>
+                    힌트
+                  </button>
                 </div>
 
                 {/* Answers inside stage */}
@@ -377,8 +452,9 @@ export default function Home() {
                   <div className={styles.answerPanel}>
                     <Choices
                       choices={current.choices}
-                      selectedIndex={selectedIndex}
+                      selectedIndex={revealCorrectIndex ?? selectedIndex}
                       onSelect={(i) => {
+                        if (revealCorrectIndex != null || isConfirming) return;
                         setSelectedIndex(i);
                       }}
                     />
