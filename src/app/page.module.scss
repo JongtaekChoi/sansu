@@ -130,6 +130,23 @@
   left: 14px;
   right: 14px;
   bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirmBtn {
+  height: 50px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-weight: 1000;
+  font-size: 18px;
+}
+
+.confirmBtn:disabled {
+  opacity: 0.45;
 }
 
 .completeOverlay {

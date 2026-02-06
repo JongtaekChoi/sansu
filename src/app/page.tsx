@@ -130,6 +130,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const current = problems?.[index] ?? null;
 
@@ -225,6 +227,8 @@ export default function Home() {
         const i0 = Math.max(0, Math.min(startIndex, generated.length - 1));
         setIndex(i0);
         setCompleted(false);
+        setSelectedIndex(null);
+        setIsConfirming(false);
         updateUrl({ lesson: nextLessonId, seed: nextSeed, i: i0 });
         setFeedback({ kind: 'none' });
         setFxPulse('none');
@@ -255,6 +259,8 @@ export default function Home() {
 
       setTimeout(() => {
         setFeedback({ kind: 'none' });
+        setSelectedIndex(null);
+        setIsConfirming(false);
         if (isLast) {
           setCompleted(true);
         } else {
@@ -271,6 +277,21 @@ export default function Home() {
     setFeedback({ kind: 'wrong' });
     fxNo();
     setWrongOnce(true);
+    setIsConfirming(false);
+  }
+
+  function confirmChoice() {
+    if (!current?.choices) return;
+    if (selectedIndex == null) return;
+    if (isConfirming) return;
+
+    setIsConfirming(true);
+    const picked = current.choices[selectedIndex];
+    if (typeof picked !== 'number') {
+      setIsConfirming(false);
+      return;
+    }
+    answerWith(picked);
   }
 
   function openHint() {
@@ -354,7 +375,20 @@ export default function Home() {
                 {/* Answers inside stage */}
                 {current.choices && !completed && (
                   <div className={styles.answerPanel}>
-                    <Choices choices={current.choices} onPick={answerWith} />
+                    <Choices
+                      choices={current.choices}
+                      selectedIndex={selectedIndex}
+                      onSelect={(i) => {
+                        setSelectedIndex(i);
+                      }}
+                    />
+                    <button
+                      className={styles.confirmBtn}
+                      disabled={selectedIndex == null || isConfirming}
+                      onClick={confirmChoice}
+                    >
+                      확인
+                    </button>
                   </div>
                 )}
 

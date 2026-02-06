@@ -2,11 +2,23 @@
 
 import styles from './Choices.module.scss';
 
-export function Choices({ choices, onPick }: { choices: number[]; onPick: (n: number) => void }) {
+export function Choices({
+  choices,
+  selectedIndex,
+  onSelect,
+}: {
+  choices: number[];
+  selectedIndex: number | null;
+  onSelect: (index: number) => void;
+}) {
   return (
     <div className={styles.choices}>
-      {choices.map((c) => (
-        <button key={c} className={styles.choiceBtn} onClick={() => onPick(c)}>
+      {choices.map((c, i) => (
+        <button
+          key={`${c}-${i}`}
+          className={selectedIndex === i ? `${styles.choiceBtn} ${styles.choiceBtnSelected}` : styles.choiceBtn}
+          onClick={() => onSelect(i)}
+        >
           {c}
         </button>
       ))}

@@ -17,8 +17,14 @@
   font-size: 22px;
   font-weight: 900;
   touch-action: manipulation;
+  transition: border-color 120ms ease, background 120ms ease, transform 80ms ease;
 }
 
 .choiceBtn:active {
   transform: translateY(1px);
+}
+
+.choiceBtnSelected {
+  border-color: rgba(124, 92, 255, 0.9);
+  background: rgba(124, 92, 255, 0.22);
 }
