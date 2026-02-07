@@ -54,6 +54,23 @@
 .board {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stageArea {
+  flex: 1;
+  min-height: 0;
+}
+
+.playControls {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .controls {

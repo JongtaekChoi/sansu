@@ -402,7 +402,8 @@ export default function Home() {
       )}
 
       <div className={styles.board}>
-        <Stage pulse={fxPulse}>
+        <div className={styles.stageArea}>
+          <Stage pulse={fxPulse}>
           <div className={styles.hud}>
             <ProgressDots index={index} />
             <div className={styles.pill}>U1-1</div>
@@ -447,26 +448,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* Answers inside stage */}
-                {current.choices && !completed && (
-                  <div className={styles.answerPanel}>
-                    <Choices
-                      choices={current.choices}
-                      selectedIndex={revealCorrectIndex ?? selectedIndex}
-                      onSelect={(i) => {
-                        if (revealCorrectIndex != null || isConfirming) return;
-                        setSelectedIndex(i);
-                      }}
-                    />
-                    <button
-                      className={styles.confirmBtn}
-                      disabled={selectedIndex == null || isConfirming}
-                      onClick={confirmChoice}
-                    >
-                      확인
-                    </button>
-                  </div>
-                )}
+                {/* Answers moved outside the stage */}
 
                 {completed && (
                   <div className={styles.completeOverlay}>
@@ -507,7 +489,29 @@ export default function Home() {
               </>
             )}
           </div>
-        </Stage>
+          </Stage>
+        </div>
+
+        {/* Play controls outside the stage */}
+        {current?.choices && !completed && (
+          <div className={styles.playControls}>
+            <Choices
+              choices={current.choices}
+              selectedIndex={revealCorrectIndex ?? selectedIndex}
+              onSelect={(i) => {
+                if (revealCorrectIndex != null || isConfirming) return;
+                setSelectedIndex(i);
+              }}
+            />
+            <button
+              className={styles.confirmBtn}
+              disabled={selectedIndex == null || isConfirming}
+              onClick={confirmChoice}
+            >
+              확인
+            </button>
+          </div>
+        )}
       </div>
 
       {devMode && (
