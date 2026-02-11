@@ -17,6 +17,22 @@ import styles from './play.module.scss';
 
 type Feedback = { kind: 'none' | 'correct' | 'wrong' };
 
+type PersistedPlaySession = {
+  v: 1;
+  modeId: string;
+  seed: number;
+  problems: AddProblem[];
+  order: number[];
+  cursor: number;
+  phase: 'main' | 'retry';
+  retryQueue: number[];
+  wrongCounts: Record<number, number>;
+  completed: boolean;
+  savedAt: number;
+};
+
+const PLAY_SESSION_KEY = 'sansu.play.v1';
+
 function playTone(freq: number, ms: number, type: OscillatorType = 'sine', gain = 0.03) {
   try {
     const AudioCtx = (globalThis as any).AudioContext || (globalThis as any).webkitAudioContext;
@@ -52,12 +68,32 @@ export default function PlayPage() {
     const sp = new URLSearchParams(location.search);
     const m = sp.get('mode');
     const s = sp.get('seed');
-    const i = sp.get('i');
-    setModeId(m ?? 'add10_nocarry');
+    const hasExplicit = sp.has('mode') || sp.has('seed') || sp.has('i') || sp.has('autostart');
+
+    if (m) setModeId(m);
     if (s && /^\d+$/.test(s)) setSeed(Number(s));
     setAutoStart(sp.has('autostart'));
-    if (i && /^\d+$/.test(i)) {
-      // consumed later after generation
+
+    // Restore only when URL does not explicitly request a scenario.
+    if (!hasExplicit) {
+      try {
+        const raw = localStorage.getItem(PLAY_SESSION_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw) as PersistedPlaySession;
+        if (saved?.v !== 1) return;
+
+        setModeId(saved.modeId || 'add10_nocarry');
+        if (Number.isFinite(saved.seed)) setSeed(saved.seed);
+        setProblems(Array.isArray(saved.problems) ? saved.problems : null);
+        setOrder(Array.isArray(saved.order) ? saved.order : []);
+        setCursor(Number.isFinite(saved.cursor) ? saved.cursor : 0);
+        setPhase(saved.phase === 'retry' ? 'retry' : 'main');
+        setRetryQueue(Array.isArray(saved.retryQueue) ? saved.retryQueue : []);
+        setWrongCounts(saved.wrongCounts ?? {});
+        setCompleted(Boolean(saved.completed));
+      } catch {
+        // ignore broken persistence
+      }
     }
   }, []);
 
@@ -131,6 +167,29 @@ export default function PlayPage() {
     newLesson(seed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart]);
+
+  // Persist progress locally (resume support)
+  useEffect(() => {
+    if (!problems || problems.length === 0) return;
+    try {
+      const payload: PersistedPlaySession = {
+        v: 1,
+        modeId,
+        seed,
+        problems,
+        order,
+        cursor,
+        phase,
+        retryQueue,
+        wrongCounts,
+        completed,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(PLAY_SESSION_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore storage quota / permission
+    }
+  }, [modeId, seed, problems, order, cursor, phase, retryQueue, wrongCounts, completed]);
 
   function advanceNext() {
     setSelectedIndex(null);
