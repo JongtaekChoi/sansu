@@ -11,7 +11,7 @@ import { ProgressDots } from '@/components/ProgressDots';
 import { RenderView } from '@/components/RenderView';
 import { Stage, type StagePulse } from '@/components/Stage';
 
-import { generateProblemsByMode, getMode } from '@/lib/modes';
+import { generateProblemsByMode, getMode, MODES } from '@/lib/modes';
 
 import styles from './play.module.scss';
 
@@ -117,6 +117,16 @@ export default function PlayPage() {
 
   const currentIndex = order.length ? order[cursor] ?? 0 : 0;
   const current = problems?.[currentIndex] ?? null;
+
+  const totalProblems = problems?.length ?? 0;
+  const wrongMainCount = retryQueue.length;
+  const firstPassCorrect = Math.max(0, totalProblems - wrongMainCount);
+  const firstPassRate = totalProblems > 0 ? Math.round((firstPassCorrect / totalProblems) * 100) : 0;
+  const retrySolved = retryQueue.filter((i) => (wrongCounts[i] ?? 0) < 2).length;
+  const retrySkipped = Math.max(0, wrongMainCount - retrySolved);
+
+  const modeIndex = MODES.findIndex((m) => m.id === mode.id);
+  const recommendedMode = MODES[(modeIndex + 1 + MODES.length) % MODES.length] ?? MODES[0];
 
   function updateUrl(next: { mode?: string; seed?: number; i?: number }) {
     try {
@@ -328,11 +338,47 @@ export default function PlayPage() {
                   {completed && (
                     <div className={styles.completeOverlay}>
                       <div className={styles.completeCard}>
-                        <div className={styles.completeTitle}>클리어</div>
-                        <div className={styles.completeSub}>다음 연습으로 갈까?</div>
+                        <div className={styles.completeTitle}>레슨 완료</div>
+                        <div className={styles.completeSub}>이번 결과 요약</div>
+
+                        <div className={styles.summaryGrid}>
+                          <div className={styles.summaryItem}>
+                            <div className={styles.summaryLabel}>총 문제</div>
+                            <div className={styles.summaryValue}>{totalProblems}</div>
+                          </div>
+                          <div className={styles.summaryItem}>
+                            <div className={styles.summaryLabel}>1차 정답</div>
+                            <div className={styles.summaryValue}>{firstPassCorrect} ({firstPassRate}%)</div>
+                          </div>
+                          <div className={styles.summaryItem}>
+                            <div className={styles.summaryLabel}>오답 재도전</div>
+                            <div className={styles.summaryValue}>{wrongMainCount}</div>
+                          </div>
+                          <div className={styles.summaryItem}>
+                            <div className={styles.summaryLabel}>재도전 해결</div>
+                            <div className={styles.summaryValue}>{retrySolved}</div>
+                          </div>
+                          <div className={styles.summaryItem}>
+                            <div className={styles.summaryLabel}>남은 약점</div>
+                            <div className={styles.summaryValue}>{retrySkipped}</div>
+                          </div>
+                        </div>
+
                         <div className={styles.completeBtns}>
                           <button className={styles.smallBtn} onClick={() => (location.href = '/')}>홈</button>
                           <button className={styles.smallBtn} onClick={() => newLesson(seed)}>다시</button>
+                          <button
+                            className={styles.smallBtn}
+                            onClick={() => {
+                              const nextSeed = seed + 1;
+                              setModeId(recommendedMode.id);
+                              setSeed(nextSeed);
+                              updateUrl({ mode: recommendedMode.id, seed: nextSeed, i: 0 });
+                              newLesson(nextSeed);
+                            }}
+                          >
+                            추천: {recommendedMode.title}
+                          </button>
                         </div>
                       </div>
                     </div>
