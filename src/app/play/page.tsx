@@ -17,6 +17,33 @@ import styles from './play.module.scss';
 
 type Feedback = { kind: 'none' | 'correct' | 'wrong' };
 
+function HintVisual({ problem }: { problem: AddProblem }) {
+  if (problem.kind === 'ARITH_CHOICE') {
+    const a = problem.a;
+    const b = problem.b;
+    return (
+      <div className={styles.arithHint}>
+        <div className={styles.hintRow}>
+          {Array.from({ length: a }).map((_, i) => (
+            <div key={`a-${i}`} className={styles.hintCellA} />
+          ))}
+        </div>
+        <div className={styles.hintRow}>
+          {Array.from({ length: b }).map((_, i) => (
+            <div key={`b-${i}`} className={styles.hintCellB} style={{ animationDelay: `${i * 60}ms` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.renderHintWrap}>
+      <RenderView spec={problem.renderSpec} />
+    </div>
+  );
+}
+
 type PersistedPlaySession = {
   v: 1;
   modeId: string;
@@ -384,10 +411,10 @@ export default function PlayPage() {
                     </div>
                   )}
 
-                  {hintOpen && (
+                  {hintOpen && current && (
                     <div className={styles.hint}>
                       <div className={styles.hintCard}>
-                        <div className={styles.hintCanvas} aria-hidden />
+                        <HintVisual problem={current} />
                       </div>
                     </div>
                   )}
